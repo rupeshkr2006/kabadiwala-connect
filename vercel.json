@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/app.js", "destination": "/api/app" },
+    { "source": "/styles.css", "destination": "/api/styles" },
+    { "source": "/favicon.svg", "destination": "/api/favicon" },
     { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
