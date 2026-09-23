@@ -22,23 +22,37 @@ export default async function handler(req, res) {
 }
 Do not identify people. Do not invent weight or price. If the material cannot be determined reliably, use "unknown". This is an estimate for form assistance, not a final material-grade determination.`;
 
-    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=" + encodeURIComponent(key);
-    const upstream = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data } }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-      })
-    });
-    const payload = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) {
-      const detail = payload?.error?.message || `Gemini returned HTTP ${upstream.status}.`;
-      console.error("Gemini image analysis failed:", upstream.status, detail);
+    const requestBody = {
+      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data } }] }],
+      generationConfig: { responseMimeType: "application/json" }
+    };
+
+    // Gemini 3.8 Flash is the primary model. If it is temporarily overloaded,
+    // fall back to the other stable Flash models instead of making the user retry.
+    const models = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"];
+    let upstream = null;
+    let payload = {};
+    let lastStatus = 502;
+    let lastDetail = "Gemini image analysis failed.";
+    for (const model of models) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+      upstream = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
+      payload = await upstream.json().catch(() => ({}));
+      if (upstream.ok) break;
+      lastStatus = upstream.status;
+      lastDetail = payload?.error?.message || `Gemini returned HTTP ${upstream.status}.`;
+      console.error(`Gemini image analysis failed on ${model}:`, upstream.status, lastDetail);
+      if (![429, 500, 502, 503, 504].includes(upstream.status)) break;
+    }
+    if (!upstream?.ok) {
       return res.status(502).json({
         error: "AI analysis service failed.",
-        detail,
-        upstreamStatus: upstream.status
+        detail: lastDetail,
+        upstreamStatus: lastStatus
       });
     }
 
