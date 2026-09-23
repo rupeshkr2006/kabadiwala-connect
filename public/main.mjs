@@ -31,7 +31,12 @@ document.addEventListener("DOMContentLoaded", () => {
       recyclerMap:"Nearby collectors", status:"Status", emptyMap:"Allow location or choose a point on the map.",
       phoneError:"Enter a valid 10-digit mobile number.", otpError:"Use the demo OTP 123456.", roleError:"Choose a role.",
       required:"Please complete the required fields.", address:"Address", details:"Details", pickup:"Pickup", price:"Indicative value",
-      kg:"kg", demoData:"Demo data", reset:"Reset demo", confirmReset:"Reset this demo session?"
+      kg:"kg", demoData:"Demo data", reset:"Reset demo", confirmReset:"Reset this demo session?",
+      marketRate:"Indicative market rate", estimated:"Estimated value", askingPrice:"Your asking price", currentOffer:"Current offer",
+      counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
+      counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
+      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain"
+
     },
     hi: {
       brand:"कबाड़ीवाला कनेक्ट", tagline:"बेचें। रीसायकल करें। फिर दोहराएं।", continue:"आगे बढ़ें", phone:"मोबाइल नंबर", otp:"OTP दर्ज करें",
@@ -51,7 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
       recyclerMap:"पास के कलेक्टर", status:"स्थिति", emptyMap:"लोकेशन की अनुमति दें या मैप पर बिंदु चुनें।",
       phoneError:"10 अंकों का मोबाइल नंबर दर्ज करें।", otpError:"डेमो OTP 123456 इस्तेमाल करें।", roleError:"भूमिका चुनें।",
       required:"जरूरी जानकारी भरें।", address:"पता", details:"जानकारी", pickup:"पिकअप", price:"अनुमानित मूल्य",
-      kg:"किलो", demoData:"डेमो डेटा", reset:"डेमो रीसेट", confirmReset:"डेमो सेशन रीसेट करें?"
+      kg:"किलो", demoData:"डेमो डेटा", reset:"डेमो रीसेट", confirmReset:"डेमो सेशन रीसेट करें?",
+      marketRate:"अनुमानित बाजार दर", estimated:"अनुमानित मूल्य", askingPrice:"आपकी कीमत", currentOffer:"वर्तमान ऑफर",
+      counter:"नई कीमत", acceptPrice:"कीमत स्वीकार करें", agreed:"तय कीमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रीसायकलर ऑफर",
+      counterHint:"नई कीमत डालें", priceNote:"यह केवल अनुमान है — अंतिम कीमत बातचीत से तय होगी।", priceRequired:"सही कीमत डालें।",
+      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव"
+
     },
     mr: {
       brand:"कबाडीवाला कनेक्ट", tagline:"विका. रिसायकल करा. पुन्हा करा.", continue:"पुढे जा", phone:"मोबाइल नंबर", otp:"OTP टाका",
@@ -71,10 +81,50 @@ document.addEventListener("DOMContentLoaded", () => {
       recyclerMap:"जवळचे कलेक्टर", status:"स्थिती", emptyMap:"लोकेशन परवानगी द्या किंवा नकाशावर बिंदू निवडा.",
       phoneError:"10 अंकी मोबाइल नंबर टाका.", otpError:"डेमो OTP 123456 वापरा.", roleError:"भूमिका निवडा.",
       required:"आवश्यक माहिती भरा.", address:"पत्ता", details:"माहिती", pickup:"पिकअप", price:"अंदाजे मूल्य",
-      kg:"किलो", demoData:"डेमो डेटा", reset:"डेमो रीसेट", confirmReset:"डेमो सेशन रीसेट करायचे?"
+      kg:"किलो", demoData:"डेमो डेटा", reset:"डेमो रीसेट", confirmReset:"डेमो सेशन रीसेट करायचे?",
+      marketRate:"अंदाजे बाजार दर", estimated:"अंदाजे किंमत", askingPrice:"तुमची किंमत", currentOffer:"सध्याची ऑफर",
+      counter:"नवी किंमत", acceptPrice:"किंमत स्वीकारा", agreed:"ठरलेली किंमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रिसायकलर ऑफर",
+      counterHint:"नवी किंमत टाका", priceNote:"ही फक्त अंदाजे किंमत आहे — अंतिम किंमत चर्चेने ठरेल.", priceRequired:"योग्य किंमत टाका.",
+      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा"
+
     }
   };
   const tr = k => (T[lang] && T[lang][k]) || T.en[k] || k;
+  const PRICE_PER_KG = {
+    plastic: 25, paper: 12, cardboard: 10, metal: 40, iron: 30,
+    copper: 650, aluminium: 150, "e-waste": 180
+  };
+  const money = n => "₹" + Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
+  const categoryKey = value => String(value||"").trim().toLowerCase().replace(/\s+/g,"-");
+  const weightKg = value => {
+    const m=String(value||"").toLowerCase().match(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|kilos|kilogram|kilograms|किलो|किलोग्राम|grams?|g|ग्रॅम|ग्राम)?/i);
+    if(!m)return 0;
+    const n=parseFloat(m[1].replace(",",".")); const u=(m[2]||"kg").toLowerCase();
+    return /^(g|gram|grams|ग्रॅम|ग्राम)$/.test(u) ? n/1000 : n;
+  };
+  const rateFor = category => PRICE_PER_KG[categoryKey(category)] || 20;
+  const indicativeFor = (category,weight) => Math.round(rateFor(category)*weightKg(weight));
+  function normalizePricing(){
+    let changed=false;
+    requests=requests.map(r=>{
+      const rate=r.rate||rateFor(r.category);
+      const total=r.indicativeTotal||indicativeFor(r.category,r.quantity);
+      const offers=Array.isArray(r.offers)&&r.offers.length?r.offers:[{by:"collector",price:Number(r.askingPrice||total),at:Date.now()}];
+      const currentOffer=Number(r.currentOffer||offers[offers.length-1]?.price||r.askingPrice||total);
+      const next={...r,rate,indicativeTotal:total,askingPrice:Number(r.askingPrice||offers[0]?.price||total),offers,currentOffer,priceStatus:r.priceStatus||"Collector offer"};
+      if(JSON.stringify(next)!==JSON.stringify(r))changed=true;
+      return next;
+    });
+    if(changed)save();
+  }
+  function offerLabel(r){
+    if(r.agreedPrice) return money(r.agreedPrice)+" agreed";
+    return money(r.currentOffer||r.askingPrice||r.indicativeTotal);
+  }
+  function pricePanel(r,showInput=false){
+    return '<div class="price-box"><div><span>Indicative</span><b>'+money(r.indicativeTotal)+'</b><small>'+money(r.rate)+' / kg</small></div><div><span>Current offer</span><b>'+offerLabel(r)+'</b><small>'+esc(r.priceStatus||"")+'</small></div>'+(showInput?'<label class="offer-input"><span>Counter offer</span><input data-offer-input="'+r.id+'" type="number" min="1" step="1" value="'+esc(r.currentOffer||r.askingPrice||r.indicativeTotal)+'" inputmode="numeric"></label>':'')+'</div>';
+  }
+
   const save = () => {
     localStorage.lang=lang; localStorage.role=role; localStorage.pos=JSON.stringify(pos);
     localStorage.requests=JSON.stringify(requests); localStorage.kcUser=JSON.stringify(user);
@@ -96,6 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ];
       save();
     }
+    normalizePricing();
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
@@ -193,21 +244,59 @@ document.addEventListener("DOMContentLoaded", () => {
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p></div><span class="arrow">→</span></article>';
   }
   function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("voiceHint")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
-    bindShell();if(window.L)initMap("formMap",true);
-    document.getElementById("loc").onclick=getLocation;
-    document.getElementById("pick").onclick=()=>enableMapPick("formMap");
-    document.getElementById("mic").onclick=startVoice;
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("askingPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+    bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
+    const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
+    document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
+    document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{
       e.preventDefault();
-      const r={id:Date.now(),category:document.getElementById("cat").value,quantity:document.getElementById("weight").value,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId};
+      const cat=document.getElementById("cat").value.trim(), weight=document.getElementById("weight").value.trim(), asking=Number(document.getElementById("askingPrice").value);
+      if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));
+      const r={id:Date.now(),category:cat,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,rate:rateFor(cat),indicativeTotal:indicativeFor(cat,weight),askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};
       requests.unshift(r);save();toast(tr("pickupCreated"));go("requests");
     };
   }
+
   function requestsScreen(){
-    seedData();
+    seedData(); normalizePricing();
     const own = role==="collector" ? requests.filter(r=>r.collectorPhone===accountId) : requests;
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("requests")+'</p><h1>'+tr("pickup")+'</h1></div></section><div class="request-list">'+(own.length?own.map(r=>'<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+(role==="recycler"&&r.status==="Pending"?'<button class="primary" data-a="'+r.id+'">'+tr("accept")+'</button>':'')+(role==="recycler"&&r.status==="Accepted"?'<button class="primary" data-d="'+r.id+'">'+tr("complete")+'</button>':'')+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>').join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("requests")+'</p><h1>'+tr("pickup")+'</h1></div></section><div class="request-list">'+(own.length?own.map(r=>{
+      const latestBy=r.offers?.[r.offers.length-1]?.by;
+      const isPending=r.status==="Pending", isAccepted=r.status==="Accepted";
+      let actions="";
+      if(role==="recycler"&&isPending){
+        actions='<button class="primary" data-accept="'+r.id+'">'+tr("acceptPrice")+' '+money(r.currentOffer)+'</button><input class="counter-input" data-counter="'+r.id+'" type="number" min="1" step="1" placeholder="'+tr("counterHint")+'" inputmode="numeric"><button class="secondary" data-counter-btn="'+r.id+'">'+tr("counter")+'</button>';
+      } else if(role==="collector"&&isPending&&latestBy==="recycler"){
+        actions='<button class="primary" data-accept="'+r.id+'">'+tr("acceptPrice")+' '+money(r.currentOffer)+'</button><input class="counter-input" data-counter="'+r.id+'" type="number" min="1" step="1" placeholder="'+tr("counterHint")+'" inputmode="numeric"><button class="secondary" data-counter-btn="'+r.id+'">'+tr("counter")+'</button>';
+      } else if(isAccepted&&role==="recycler"){
+        actions='<button class="primary" data-d="'+r.id+'">'+tr("complete")+'</button>';
+      } else if(isPending){
+        actions='<span class="waiting">'+tr("waiting")+'</span>';
+      }
+      return '<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><div class="request-prices"><span>Indicative <b>'+money(r.indicativeTotal)+'</b></span><span>Collector <b>'+money(r.askingPrice)+'</b></span><span>Current <b>'+money(r.currentOffer)+'</b></span>'+(r.agreedPrice?'<span class="agreed-price">Agreed <b>'+money(r.agreedPrice)+'</b></span>':'')+'</div><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+actions+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>';
+    }).join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
+    bindShell();
+    A.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>acceptOffer(b.dataset.accept));
+    A.querySelectorAll("[data-counter-btn]").forEach(b=>b.onclick=()=>counterOffer(b.dataset.counterBtn));
+    A.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.d,"Completed"));
+    A.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.v));if(r&&r.lat)showRequestMap(r);});
+  }
+  function acceptOffer(id){
+    const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
+    r.agreedPrice=Number(r.currentOffer); r.status="Accepted"; r.priceStatus="Agreed"; save(); render();
+  }
+  function counterOffer(id){
+    const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
+    const input=document.querySelector('[data-counter="'+id+'"]'); const price=Number(input?.value);
+    if(!Number.isFinite(price)||price<=0)return toast(tr("priceRequired"));
+    const by=role==="collector"?"collector":"recycler";
+    r.currentOffer=price; r.priceStatus=by==="collector"?tr("collectorOffer"):tr("recyclerOffer");
+    r.offers=(r.offers||[]).concat({by,price,at:Date.now()});
+    save(); render();
+  }
+
+quest-list">'+(own.length?own.map(r=>'<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+(role==="recycler"&&r.status==="Pending"?'<button class="primary" data-a="'+r.id+'">'+tr("accept")+'</button>':'')+(role==="recycler"&&r.status==="Accepted"?'<button class="primary" data-d="'+r.id+'">'+tr("complete")+'</button>':'')+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>').join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
     bindShell();
     A.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.a,"Accepted"));
     A.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.d,"Completed"));
