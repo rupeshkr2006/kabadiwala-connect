@@ -296,12 +296,6 @@ document.addEventListener("DOMContentLoaded", () => {
     save(); render();
   }
 
-quest-list">'+(own.length?own.map(r=>'<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+(role==="recycler"&&r.status==="Pending"?'<button class="primary" data-a="'+r.id+'">'+tr("accept")+'</button>':'')+(role==="recycler"&&r.status==="Accepted"?'<button class="primary" data-d="'+r.id+'">'+tr("complete")+'</button>':'')+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>').join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
-    bindShell();
-    A.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.a,"Accepted"));
-    A.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.d,"Completed"));
-    A.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.v));if(r&&r.lat)showRequestMap(r);});
-  }
   function showRequestMap(r){
     const old=document.getElementById("requestMapModal"); if(old)old.remove();
     const modal=document.createElement("div");
