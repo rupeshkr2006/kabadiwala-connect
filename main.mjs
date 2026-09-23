@@ -99,20 +99,26 @@ document.addEventListener("DOMContentLoaded", () => {
     A.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>go(b.dataset.p));
   }
   function auth(){
+    if(!location.hash || location.hash==="#login") return phoneScreen();
     if(location.hash==="#otp") return otpScreen();
     if(location.hash==="#role") return roleScreen();
     if(location.hash==="#setup") return setupScreen();
     return phoneScreen();
   }
   function phoneScreen(){
-    A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">'+tr("phone")+'</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
-    document.getElementById("phoneForm").onsubmit=e=>{e.preventDefault();const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));user={phone:p,verified:false};localStorage.kcUser=JSON.stringify(user);go("otp");};
+    A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">Sign in with your mobile number</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" autofocus required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
+    document.getElementById("phoneForm").onsubmit=e=>{e.preventDefault();const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));user={phone:p,verified:false};save();go("otp");};
   }
   function otpScreen(){
-    A.innerHTML='<main class="auth"><div class="auth-card"><button class="back" id="change">← '+tr("change")+'</button><p class="eyebrow">VERIFY</p><h1>'+tr("otp")+'</h1><p class="lead">+91 '+esc(user?.phone||"")+'</p><form id="otpForm"><input class="otp-input" id="otp" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code" required><button class="primary full">'+tr("verify")+' <span>→</span></button></form><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
+    let timer=30;
+    A.innerHTML='<main class="auth"><div class="auth-card"><button class="back" id="change">← '+tr("change")+'</button><p class="eyebrow">VERIFY</p><h1>'+tr("otp")+'</h1><p class="lead">+91 '+esc(user?.phone||"")+'</p><form id="otpForm"><input class="otp-input" id="otp" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code" autofocus required><button class="primary full">'+tr("verify")+' <span>→</span></button></form><div class="otp-meta"><span id="timer">00:30</span><button type="button" id="resend" class="text-btn" disabled>'+tr("resend")+'</button></div><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
     document.getElementById("change").onclick=()=>go("login");
+    const resend=document.getElementById("resend"), timerEl=document.getElementById("timer");
+    const int=setInterval(()=>{timer--;if(timerEl)timerEl.textContent="00:"+String(Math.max(timer,0)).padStart(2,"0");if(timer<=0){clearInterval(int);if(resend)resend.disabled=false;}},1000);
+    resend.onclick=()=>{timer=30;resend.disabled=true;toast(tr("resend"));};
     document.getElementById("otpForm").onsubmit=e=>{e.preventDefault();if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));user.verified=true;save();go(role?"dashboard":"role");};
   }
+
   function roleScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div></div></main>';
     A.querySelectorAll("[data-role]").forEach(b=>b.onclick=()=>{role=b.dataset.role;save();go("setup");});
