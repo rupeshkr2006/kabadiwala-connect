@@ -5,27 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Kabadiwala Connect - connect scrap collectors and recyclers">
 <title>Kabadiwala Connect</title>
-<link rel="icon" href="./favicon.svg">
-<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<div id="app">
-  <main style="max-width:900px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif">
-    <h1>Kabadiwala Connect</h1>
-    <p>Loading application…</p>
-  </main>
-</div>
-<script>
-window.addEventListener("error",function(e){
-  var p=document.querySelector("#app p");
-  if(p)p.textContent="Application error: "+(e.message||"Please reload.");
-});
-window.addEventListener("unhandledrejection",function(){
-  var p=document.querySelector("#app p");
-  if(p)p.textContent="Application startup error. Please reload.";
-});
-</script>
+<div id="app"><main style="max-width:900px;margin:48px auto;padding:24px;font-family:system-ui,sans-serif"><h1>Kabadiwala Connect</h1><p>Loading application…</p></main></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./main.js"></script>
+<script src="/public/main.js"></script>
 </body>
 </html>
