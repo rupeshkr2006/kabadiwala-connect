@@ -416,8 +416,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const expected=document.getElementById("askingPrice");
     if(expected){
-      const pm=raw.match(/(?:expect(?:ing)?|want|need|for|at|price|कीमत|दाम|भाव|किंमत|भावात)[^\d₹]{0,15}(?:₹|rs\.?|inr)?\s*(\d+(?:[.,]\d+)?)/i);
-      if(pm)expected.value=Math.round(Number(pm[1].replace(",",".")));
+      const priceText=raw.toLowerCase();
+      let price=null;
+
+      // First handle numeric prices: ₹500, Rs 500, 500 rupees, "price is 500", etc.
+      const numericPatterns=[
+        /(?:₹|rs\.?|inr)\s*(\d+(?:[.,]\d+)?)/i,
+        /(\d+(?:[.,]\d+)?)\s*(?:₹|rs\.?|inr|rupees?|रुपये|रुपए|रुपया|रुपये|रुपयांना|रुपये)/i,
+        /(?:expect(?:ing)?|expected|want|need|asking|price|कीमत|दाम|भाव|किंमत|अपेक्षा|अपेक्षित|हवे|हवी)[^\d₹]{0,35}(?:₹|rs\.?|inr)?\s*(\d+(?:[.,]\d+)?)/i
+      ];
+      for(const re of numericPatterns){
+        const m=raw.match(re);
+        if(m){ price=Number((m[1]||m[2]).replace(",",".")); if(Number.isFinite(price))break; }
+      }
+
+      // Also understand spoken number words, e.g. "expect five hundred rupees".
+      if(price===null){
+        const ones={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,
+          एक:1,एकं:1,दो:2,दोन्ही:2,तीन:3,चार:4,पांच:5,पाँच:5,पाच:5,सहा:6,छह:6,सात:7,आठ:8,नऊ:9,नव:9,दहा:10};
+        const tens={twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,
+          बीस:20,तीस:30,चालीस:40,पचास:50,साठ:60,सत्तर:70,ऐंशी:80,नव्वद:90};
+        const scale={hundred:100,thousand:1000,lakh:100000,lac:100000,करोड़:10000000,crore:10000000};
+        const tokens=priceText.replace(/[,₹]/g," ").replace(/\b(?:rupees?|rs|inr)\b/g," ").split(/\s+/).filter(Boolean);
+        const keywordIndex=tokens.findIndex(t=>["expect","expecting","expected","want","need","asking","price","कीमत","दाम","भाव","किंमत","अपेक्षा","अपेक्षित","हवे","हवी"].includes(t));
+        const windowTokens=keywordIndex>=0?tokens.slice(keywordIndex+1,keywordIndex+9):tokens;
+        let total=0,current=0,foundWord=false;
+        for(const t of windowTokens){
+          if(ones[t]!==undefined){current+=ones[t];foundWord=true;}
+          else if(tens[t]!==undefined){current+=tens[t];foundWord=true;}
+          else if(scale[t]!==undefined){
+            foundWord=true;
+            if(current===0)current=1;
+            current*=scale[t];
+            if(scale[t]>=1000){total+=current;current=0;}
+          } else if(foundWord && ["and","hundred","thousand","lakh","lac","crore","करोड़"].includes(t)){}
+          else if(foundWord) break;
+        }
+        if(foundWord){price=total+current;}
+      }
+
+      if(Number.isFinite(price)&&price>0)expected.value=Math.round(price);
     }
     const note=document.getElementById("notes");if(note)note.value=raw;
     const catEl=document.getElementById("cat"), weightEl=document.getElementById("weight");
