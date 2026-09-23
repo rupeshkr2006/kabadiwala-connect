@@ -11,3 +11,19 @@
 
 .otp-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;color:var(--muted);font-size:12px}
 .text-btn:disabled{opacity:.45;cursor:not-allowed}
+
+.profile-pill{border:1px solid var(--line)!important;background:#fff!important;color:var(--green)!important;font-weight:700!important}
+.map-modal{position:fixed;inset:0;z-index:5000;background:rgba(10,28,20,.48);display:grid;place-items:center;padding:16px}
+.map-modal-card{width:min(720px,100%);background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 24px 70px #0003}
+.map-modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.map-modal-head strong{display:block;font-size:14px}.map-modal-head small{display:block;color:var(--muted);font-size:12px;margin-top:3px}.request-map{height:420px;border:0;border-radius:0}
+.leaflet-container{font:12px "DM Sans",system-ui,sans-serif}
+@media(max-width:600px){
+  .top{height:58px;padding:0 10px}.nav{gap:1px;overflow-x:auto;max-width:72vw}.nav button,.lang{padding:7px 6px;font-size:11px;white-space:nowrap}.nav button[data-p="requests"],.nav button[data-p="profile"]{display:none}.profile-pill{display:inline-block!important;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+  .page{padding:18px 10px 34px}.welcome h1,.section-title h1{font-size:25px;letter-spacing:-.6px}.welcome,.section-title{gap:10px;margin-bottom:15px}
+  .panel{padding:14px;border-radius:14px}.panel h2{font-size:15px}.map{height:270px}.small-map{height:160px}.tips .map{height:240px}
+  .dash-grid,.form-layout{gap:12px}.quick{gap:9px;margin-top:12px}.quick-card{padding:12px}.quick-card strong{font-size:13px}.quick-card small{font-size:11px}
+  .full-request h2{font-size:16px}.request-actions{width:100%}.request-actions button{flex:1}.auth{padding:14px}.auth-card{padding:22px 18px;border-radius:18px}.auth-card h1{font-size:25px}.lead{font-size:13px;margin-bottom:16px}.logo-ring{width:44px;height:44px;font-size:26px;margin-bottom:17px}
+  .voice-box{padding:10px;margin-bottom:12px}.voice-box strong{font-size:13px}.voice-box p{font-size:11px}.mic{width:40px;height:40px;flex-basis:40px}.form-panel label{font-size:12px;margin-bottom:10px}.form-panel input,.form-panel select,.form-panel textarea{padding:10px}.location-actions{gap:6px}.location-actions button{font-size:12px;padding:8px 10px}
+  .profile-row{padding:11px 0;font-size:13px}.request-map{height:60vh}
+}
