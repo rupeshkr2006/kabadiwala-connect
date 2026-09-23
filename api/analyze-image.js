@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
-    const key = process.env.GEMINI_API_KEY;
+    const key = String(process.env.GEMINI_API_KEY || "").trim();
     if (!key) return res.status(503).json({ error: "GEMINI_API_KEY is not configured on Vercel." });
     const { image } = req.body || {};
     if (!image || typeof image !== "string" || !image.startsWith("data:image/")) {
@@ -31,12 +31,23 @@ Do not identify people. Do not invent weight or price. If the material cannot be
         generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
       })
     });
-    const payload = await upstream.json();
-    if (!upstream.ok) return res.status(502).json({ error: "AI analysis service failed.", detail: payload?.error?.message || "Upstream error" });
+    const payload = await upstream.json().catch(() => ({}));
+    if (!upstream.ok) {
+      const detail = payload?.error?.message || `Gemini returned HTTP ${upstream.status}.`;
+      console.error("Gemini image analysis failed:", upstream.status, detail);
+      return res.status(502).json({
+        error: "AI analysis service failed.",
+        detail,
+        upstreamStatus: upstream.status
+      });
+    }
 
     const text = payload?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || "{}";
     let result;
     try { result = JSON.parse(text); } catch { result = JSON.parse(text.replace(/^\s*\`\`\`json\s*/,"").replace(/\s*\`\`\`\s*$/,"")); }
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      return res.status(502).json({ error: "AI returned an invalid analysis result." });
+    }
     return res.status(200).json({ result });
   } catch (error) {
     console.error(error);
