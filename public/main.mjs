@@ -3,11 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const demo = { lat: 16.5062, lng: 80.6480 };
   let lang = localStorage.lang || "en";
   let user = JSON.parse(localStorage.kcUser || "null");
+  let accountId = localStorage.kcAccountId || user?.phone || "";
+  let accounts = JSON.parse(localStorage.kcAccounts || "{}");
   let role = localStorage.role || "";
   let pos = JSON.parse(localStorage.pos || "null");
   let requests = JSON.parse(localStorage.requests || "[]");
   let profile = JSON.parse(localStorage.kcProfile || "null");
   let recognition = null;
+  let maps = {};
 
   const T = {
     en: {
@@ -76,6 +79,11 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.lang=lang; localStorage.role=role; localStorage.pos=JSON.stringify(pos);
     localStorage.requests=JSON.stringify(requests); localStorage.kcUser=JSON.stringify(user);
     localStorage.kcProfile=JSON.stringify(profile);
+    localStorage.kcAccountId=accountId;
+    if(accountId) {
+      accounts[accountId]={phone:accountId,role,profile,pos,verified:!!user?.verified};
+      localStorage.kcAccounts=JSON.stringify(accounts);
+    }
   };
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   function toast(text){ const d=document.createElement("div"); d.className="toast"; d.textContent=text; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
@@ -91,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button>'+
+      '<button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
@@ -107,7 +115,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function phoneScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">Sign in with your mobile number</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" autofocus required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
-    document.getElementById("phoneForm").onsubmit=e=>{e.preventDefault();const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));user={phone:p,verified:false};save();go("otp");};
+    document.getElementById("phoneForm").onsubmit=e=>{
+      e.preventDefault();
+      const p=document.getElementById("phone").value.replace(/\D/g,"");
+      if(p.length!==10)return toast(tr("phoneError"));
+      accountId=p;
+      const existing=accounts[p];
+      user={phone:p,verified:false};
+      role=existing?.role||"";
+      profile=existing?.profile||null;
+      pos=null;
+      save();
+      go("otp");
+    };
   }
   function otpScreen(){
     let timer=30;
@@ -116,7 +136,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const resend=document.getElementById("resend"), timerEl=document.getElementById("timer");
     const int=setInterval(()=>{timer--;if(timerEl)timerEl.textContent="00:"+String(Math.max(timer,0)).padStart(2,"0");if(timer<=0){clearInterval(int);if(resend)resend.disabled=false;}},1000);
     resend.onclick=()=>{timer=30;resend.disabled=true;toast(tr("resend"));};
-    document.getElementById("otpForm").onsubmit=e=>{e.preventDefault();if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));user.verified=true;save();go(role?"dashboard":"role");};
+    document.getElementById("otpForm").onsubmit=e=>{
+      e.preventDefault();
+      if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));
+      user.verified=true;
+      const existing=accounts[accountId];
+      role=existing?.role||"";
+      profile=existing?.profile||null;
+      pos=existing?.pos||null;
+      save();
+      go(role?"dashboard":"role");
+    };
   }
 
   function roleScreen(){
@@ -131,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div><button class="primary full">'+tr("save")+' <span>→</span></button></form></div></main>';
     if(window.L)initMap("miniMap",true);
     document.getElementById("loc").onclick=getLocation;
-    document.getElementById("mapPick").onclick=()=>toast(tr("emptyMap"));
+    document.getElementById("mapPick").onclick=()=>enableMapPick("miniMap");
     document.getElementById("setupForm").onsubmit=e=>{e.preventDefault();profile={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};if(isR){profile.business=document.getElementById("business").value;profile.materials=document.getElementById("materials").value;}save();go("dashboard");};
   }
   function dashboard(){
@@ -166,20 +196,40 @@ document.addEventListener("DOMContentLoaded", () => {
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("voiceHint")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);
     document.getElementById("loc").onclick=getLocation;
-    document.getElementById("pick").onclick=()=>toast(tr("emptyMap"));
+    document.getElementById("pick").onclick=()=>enableMapPick("formMap");
     document.getElementById("mic").onclick=startVoice;
-    document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const r={id:Date.now(),category:document.getElementById("cat").value,quantity:document.getElementById("weight").value,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector"};requests.unshift(r);save();toast(tr("pickupCreated"));go("requests");};
+    document.getElementById("scrapForm").onsubmit=e=>{
+      e.preventDefault();
+      const r={id:Date.now(),category:document.getElementById("cat").value,quantity:document.getElementById("weight").value,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId};
+      requests.unshift(r);save();toast(tr("pickupCreated"));go("requests");
+    };
   }
   function requestsScreen(){
     seedData();
-    const own = role==="collector" ? requests.filter(r=>r.collector===(profile?.name||"Demo Collector")) : requests;
+    const own = role==="collector" ? requests.filter(r=>r.collectorPhone===accountId) : requests;
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("requests")+'</p><h1>'+tr("pickup")+'</h1></div></section><div class="request-list">'+(own.length?own.map(r=>'<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+(role==="recycler"&&r.status==="Pending"?'<button class="primary" data-a="'+r.id+'">'+tr("accept")+'</button>':'')+(role==="recycler"&&r.status==="Accepted"?'<button class="primary" data-d="'+r.id+'">'+tr("complete")+'</button>':'')+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>').join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
     bindShell();
     A.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.a,"Accepted"));
     A.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.d,"Completed"));
     A.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.v));if(r&&r.lat)showRequestMap(r);});
   }
-  function showRequestMap(r){toast((r.address||"Pickup")+" · "+Number(r.lat).toFixed(4)+", "+Number(r.lng).toFixed(4));}
+  function showRequestMap(r){
+    const old=document.getElementById("requestMapModal"); if(old)old.remove();
+    const modal=document.createElement("div");
+    modal.id="requestMapModal"; modal.className="map-modal";
+    modal.innerHTML='<div class="map-modal-card"><div class="map-modal-head"><div><strong>'+esc(r.category)+' · '+esc(r.quantity)+'</strong><small>'+esc(r.address||"Pickup location")+'</small></div><button class="icon-btn" id="closeRequestMap">×</button></div><div id="requestMap" class="map request-map"></div></div>';
+    document.body.appendChild(modal);
+    document.getElementById("closeRequestMap").onclick=()=>modal.remove();
+    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    setTimeout(()=>{
+      if(!window.L)return;
+      const m=L.map("requestMap",{scrollWheelZoom:false}).setView([Number(r.lat)||demo.lat,Number(r.lng)||demo.lng],15);
+      maps.requestMap=m;
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(m);
+      L.marker([Number(r.lat)||demo.lat,Number(r.lng)||demo.lng]).addTo(m).bindPopup(esc(r.address||"Pickup location")).openPopup();
+      setTimeout(()=>m.invalidateSize(),100);
+    },50);
+  }
   function updateStatus(id,status){const r=requests.find(x=>String(x.id)===String(id));if(r){r.status=status;save();render();}}
   function profileScreen(){
     A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">'+tr("profile")+'</p><h1>'+esc(profile?.name||"")+'</h1></div></section><section class="panel profile-panel"><div class="profile-row"><span>'+tr("phone")+'</span><b>+91 '+esc(user?.phone||"")+'</b></div><div class="profile-row"><span>'+tr("role")+'</span><b>'+tr(role)+'</b></div><div class="profile-row"><span>'+tr("area")+'</span><b>'+esc(profile?.area||"")+'</b></div><div class="profile-row"><span>'+tr("language")+'</span><select id="profileLang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select></div><button class="secondary full" id="edit">'+tr("edit")+'</button><button class="danger full" id="out">'+tr("signOut")+'</button></section></main>';
@@ -187,21 +237,44 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function initMap(id,compact=false){
     const el=document.getElementById(id);if(!el||!window.L)return;
+    if(maps[id]){try{maps[id].remove();}catch(e){}}
     const center=pos?[pos.lat,pos.lng]:[demo.lat,demo.lng];
-    const map=L.map(el,{scrollWheelZoom:false}).setView(center,compact?12:13);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
-    if(pos)L.marker([pos.lat,pos.lng]).addTo(map).bindPopup(tr("locationReady"));
+    const map=L.map(el,{scrollWheelZoom:false}).setView(center,compact?13:14);
+    maps[id]=map;
+    const tiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19});
+    tiles.on("tileerror",()=>{const w=document.getElementById("where");if(w)w.textContent=tr("locationFallback");});
+    tiles.addTo(map);
+    if(pos)L.marker([pos.lat,pos.lng]).addTo(map).bindPopup(tr("locationReady")).openPopup();
     if(role==="collector"){
       [[16.515,80.637,"Green Cycle Recycler"],[16.495,80.665,"Eco Metals"],[16.523,80.610,"City Recycle Hub"]].forEach(x=>L.marker([x[0],x[1]]).addTo(map).bindPopup(x[2]));
     } else {
       requests.slice(0,8).forEach(r=>L.marker([r.lat||demo.lat,r.lng||demo.lng]).addTo(map).bindPopup(esc(r.collector)+" · "+esc(r.category)));
     }
-    map.on("click",e=>{pos={lat:e.latlng.lat,lng:e.latlng.lng};save();L.marker([pos.lat,pos.lng]).addTo(map);const w=document.getElementById("where");if(w)w.textContent=tr("locationReady")+" · "+pos.lat.toFixed(4)+", "+pos.lng.toFixed(4);});
-    setTimeout(()=>map.invalidateSize(),100);
+    map.on("click",e=>setPosition(e.latlng.lat,e.latlng.lng,map,id));
+    setTimeout(()=>map.invalidateSize(),150);
+  }
+  function setPosition(lat,lng,map,id){
+    pos={lat,lng};save();
+    if(map){map.setView([lat,lng],15);L.marker([lat,lng]).addTo(map).bindPopup(tr("locationReady")).openPopup();}
+    const w=document.getElementById("where");if(w)w.textContent=tr("locationReady");
+    const a=document.getElementById("address");if(a)a.value=lat.toFixed(5)+", "+lng.toFixed(5);
+    const area=document.getElementById("area");if(area)area.value=lat.toFixed(5)+", "+lng.toFixed(5);
+  }
+  function enableMapPick(id){
+    const m=maps[id];
+    if(!m)return toast(tr("emptyMap"));
+    toast(tr("chooseMap"));
+    m.once("click",e=>setPosition(e.latlng.lat,e.latlng.lng,m,id));
   }
   function getLocation(){
-    if(!navigator.geolocation)return toast(tr("locationFallback"));
-    navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lng:p.coords.longitude};save();render();toast(tr("locationReady"));},()=>toast(tr("locationFallback")),{enableHighAccuracy:true,timeout:10000});
+    if(!window.isSecureContext || !navigator.geolocation)return toast(tr("locationFallback"));
+    navigator.geolocation.getCurrentPosition(p=>{
+      setPosition(p.coords.latitude,p.coords.longitude,maps.formMap||maps.miniMap||maps.map);
+      if(document.getElementById("where"))document.getElementById("where").textContent=tr("locationReady");
+      toast(tr("locationReady"));
+    },()=>{
+      toast(tr("locationFallback"));
+    },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
   function startVoice(){
