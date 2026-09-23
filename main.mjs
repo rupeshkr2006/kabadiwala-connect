@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.kcProfile=JSON.stringify(profile);
     localStorage.kcAccountId=accountId;
     if(accountId) {
-      accounts[accountId]={phone:accountId,role,profile,verified:!!user?.verified};
+      accounts[accountId]={phone:accountId,role,profile,pos,verified:!!user?.verified};
       localStorage.kcAccounts=JSON.stringify(accounts);
     }
   };
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button>'+
+      '<button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
