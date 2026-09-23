@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
       phoneError:"Enter a valid 10-digit mobile number.", otpError:"Use the demo OTP 123456.", roleError:"Choose a role.",
       required:"Please complete the required fields.", address:"Address", details:"Details", pickup:"Pickup", price:"Indicative value",
       kg:"kg", demoData:"Demo data", reset:"Reset demo", confirmReset:"Reset this demo session?",
-      marketRate:"Indicative market rate", estimated:"Estimated value", askingPrice:"Your asking price", currentOffer:"Current offer",
+      marketRate:"Indicative market rate", minimumPrice:"Minimum expected price", estimated:"Estimated value", itemType:"Item / type", askingPrice:"Your asking price", expectedPrice:"Expected price", currentOffer:"Current offer",
       counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
       counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
       priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain"
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
       phoneError:"10 अंकों का मोबाइल नंबर दर्ज करें।", otpError:"डेमो OTP 123456 इस्तेमाल करें।", roleError:"भूमिका चुनें।",
       required:"जरूरी जानकारी भरें।", address:"पता", details:"जानकारी", pickup:"पिकअप", price:"अनुमानित मूल्य",
       kg:"किलो", demoData:"डेमो डेटा", reset:"डेमो रीसेट", confirmReset:"डेमो सेशन रीसेट करें?",
-      marketRate:"अनुमानित बाजार दर", estimated:"अनुमानित मूल्य", askingPrice:"आपकी कीमत", currentOffer:"वर्तमान ऑफर",
+      marketRate:"अनुमानित बाजार दर", minimumPrice:"न्यूनतम अनुमानित कीमत", estimated:"अनुमानित मूल्य", itemType:"वस्तु / प्रकार", askingPrice:"आपकी कीमत", expectedPrice:"आपकी अपेक्षित कीमत", currentOffer:"वर्तमान ऑफर",
       counter:"नई कीमत", acceptPrice:"कीमत स्वीकार करें", agreed:"तय कीमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रीसायकलर ऑफर",
       counterHint:"नई कीमत डालें", priceNote:"यह केवल अनुमान है — अंतिम कीमत बातचीत से तय होगी।", priceRequired:"सही कीमत डालें।",
       priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव"
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
       phoneError:"10 अंकी मोबाइल नंबर टाका.", otpError:"डेमो OTP 123456 वापरा.", roleError:"भूमिका निवडा.",
       required:"आवश्यक माहिती भरा.", address:"पत्ता", details:"माहिती", pickup:"पिकअप", price:"अंदाजे मूल्य",
       kg:"किलो", demoData:"डेमो डेटा", reset:"डेमो रीसेट", confirmReset:"डेमो सेशन रीसेट करायचे?",
-      marketRate:"अंदाजे बाजार दर", estimated:"अंदाजे किंमत", askingPrice:"तुमची किंमत", currentOffer:"सध्याची ऑफर",
+      marketRate:"अंदाजे बाजार दर", minimumPrice:"किमान अंदाजे किंमत", estimated:"अंदाजे किंमत", itemType:"वस्तू / प्रकार", askingPrice:"तुमची किंमत", expectedPrice:"तुमची अपेक्षित किंमत", currentOffer:"सध्याची ऑफर",
       counter:"नवी किंमत", acceptPrice:"किंमत स्वीकारा", agreed:"ठरलेली किंमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रिसायकलर ऑफर",
       counterHint:"नवी किंमत टाका", priceNote:"ही फक्त अंदाजे किंमत आहे — अंतिम किंमत चर्चेने ठरेल.", priceRequired:"योग्य किंमत टाका.",
       priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा"
@@ -94,6 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
     plastic: 25, paper: 12, cardboard: 10, metal: 40, iron: 30,
     copper: 650, aluminium: 150, "e-waste": 180
   };
+  const MIN_PRICE_PER_KG = {
+    plastic: 20, paper: 9, cardboard: 8, metal: 32, iron: 24,
+    copper: 520, aluminium: 120, "e-waste": 145
+  };
   const money = n => "₹" + Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
   const categoryKey = value => String(value||"").trim().toLowerCase().replace(/\s+/g,"-");
   const weightKg = value => {
@@ -103,7 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return /^(g|gram|grams|ग्रॅम|ग्राम)$/.test(u) ? n/1000 : n;
   };
   const rateFor = category => PRICE_PER_KG[categoryKey(category)] || 20;
+  const minRateFor = category => MIN_PRICE_PER_KG[categoryKey(category)] || Math.max(15,Math.round(rateFor(category)*0.8));
   const indicativeFor = (category,weight) => Math.round(rateFor(category)*weightKg(weight));
+  const minimumFor = (category,weight) => Math.round(minRateFor(category)*weightKg(weight));
   function normalizePricing(){
     let changed=false;
     requests=requests.map(r=>{
@@ -244,16 +250,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong></div><span class="arrow">→</span></article>';
   }
   function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("askingPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
-    const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
+    const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
     document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{
       e.preventDefault();
-      const cat=document.getElementById("cat").value.trim(), weight=document.getElementById("weight").value.trim(), asking=Number(document.getElementById("askingPrice").value);
+      const cat=document.getElementById("cat").value.trim(), itemType=document.getElementById("itemType").value.trim(), weight=document.getElementById("weight").value.trim(), asking=Number(document.getElementById("askingPrice").value);
       if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));
-      const r={id:Date.now(),category:cat,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,rate:rateFor(cat),indicativeTotal:indicativeFor(cat,weight),askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};
+      const r={id:Date.now(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};
       requests.unshift(r);save();toast(tr("pickupCreated"));go("requests");
     };
   }
@@ -274,7 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if(isPending){
         actions='<span class="waiting">'+tr("waiting")+'</span>';
       }
-      return '<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><div class="request-prices"><span>Indicative <b>'+money(r.indicativeTotal)+'</b></span><span>Collector <b>'+money(r.askingPrice)+'</b></span><span>Current <b>'+money(r.currentOffer)+'</b></span>'+(r.agreedPrice?'<span class="agreed-price">Agreed <b>'+money(r.agreedPrice)+'</b></span>':'')+'</div><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+actions+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>';
+      return '<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+(r.itemType?' · '+esc(r.itemType):'')+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><div class="request-prices"><span>Indicative <b>'+money(r.indicativeTotal)+'</b></span><span>Collector <b>'+money(r.askingPrice)+'</b></span><span>Current <b>'+money(r.currentOffer)+'</b></span>'+(r.agreedPrice?'<span class="agreed-price">Agreed <b>'+money(r.agreedPrice)+'</b></span>':'')+'</div><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+actions+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>';
     }).join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
     bindShell();
     A.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>acceptOffer(b.dataset.accept));
@@ -394,7 +400,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if(/damaged|broken|खराब|टूटा|तुटले|फुटले/i.test(raw))document.getElementById("cond").selectedIndex=2;
     else if(/used|old|पुराना|वापरले|जुना|जुनी/i.test(raw))document.getElementById("cond").selectedIndex=1;
     else if(/good|clean|अच्छा|अच्छी|चांगला|चांगली/i.test(raw))document.getElementById("cond").selectedIndex=0;
+    const item=document.getElementById("itemType");
+    if(item){
+      const cleaned=raw
+        .replace(/\b(?:i want|i have|sell|selling|scrap|price|expect|expecting|want|for|please|is|at|around|rupees?|rs)\b/gi," ")
+        .replace(/\d+(?:[.,]\d+)?\s*(?:kg|kilo|kilos|kilogram|kilograms|grams?|g|किलो|किलोग्राम|ग्राम|ग्रॅम)?/gi," ")
+        .replace(/₹\s*\d+(?:[.,]\d+)?|\b(?:rs\.?|inr)\s*\d+(?:[.,]\d+)?/gi," ")
+        .replace(/\s+/g," ").trim();
+      const known=[found?.[0], "good","used","damaged","plastic","paper","cardboard","metal","iron","copper","aluminium","e-waste"].filter(Boolean).map(x=>String(x).toLowerCase());
+      const parts=cleaned.split(/[,;]|\band\b|\bऔर\b|\bआणि\b/gi).map(x=>x.trim()).filter(Boolean);
+      const candidate=parts.find(x=>!known.some(k=>x.toLowerCase()===k));
+      if(candidate && candidate.length<60)item.value=candidate;
+    }
+    const expected=document.getElementById("askingPrice");
+    if(expected){
+      const pm=raw.match(/(?:expect(?:ing)?|want|need|for|at|price|कीमत|दाम|भाव|किंमत|भावात)[^\d₹]{0,15}(?:₹|rs\.?|inr)?\s*(\d+(?:[.,]\d+)?)/i);
+      if(pm)expected.value=Math.round(Number(pm[1].replace(",",".")));
+    }
     const note=document.getElementById("notes");if(note)note.value=raw;
+    const catEl=document.getElementById("cat"), weightEl=document.getElementById("weight");
+    if(catEl&&weightEl){catEl.dispatchEvent(new Event("input"));weightEl.dispatchEvent(new Event("input"));}
     toast("✓ "+raw);
   }
   function render(){
