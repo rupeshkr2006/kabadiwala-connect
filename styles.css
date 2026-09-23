@@ -46,3 +46,5 @@
   .request-prices span{font-size:10px}
   .counter-input{width:100%;min-width:0}
 }
+
+.card-price{display:block;color:var(--green);font-size:13px;margin-top:6px}
