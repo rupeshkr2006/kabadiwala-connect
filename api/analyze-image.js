@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 }
 Do not identify people. Do not invent weight or price. If the material cannot be determined reliably, use "unknown". This is an estimate for form assistance, not a final material-grade determination.`;
 
-    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(key);
+    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=" + encodeURIComponent(key);
     const upstream = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
