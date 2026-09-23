@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kabadiwala Connect</title>
-<link rel="icon" href="/favicon.svg">
-<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="./favicon.svg">
+<link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 <div id="app">
@@ -14,13 +14,7 @@
     <p id="boot">Loading application…</p>
   </main>
 </div>
-<script>
-window.addEventListener("error", function(e){
-  var el=document.getElementById("boot");
-  if(el) el.textContent="Application startup error: "+(e.message||"unknown error");
-});
-</script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-<script src="/app.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
