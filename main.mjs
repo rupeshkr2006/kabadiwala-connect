@@ -259,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try{
       const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
       const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.error||"analysis failed");
+      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.detail?`${data.error||"AI analysis failed"}: ${data.detail}`:(data.error||"AI analysis failed"));
       const result=data.result||{};
       if(result.category)document.getElementById("cat").value=result.category;
       if(result.itemType)document.getElementById("itemType").value=result.itemType;
