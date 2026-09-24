@@ -453,26 +453,120 @@ document.addEventListener("DOMContentLoaded", () => {
   function requestCard(r){
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
+  const OFFLINE_MODEL_URL="/models/ewaste_mobilenetv2_fp16.tflite";
+  const OFFLINE_LABELS_URL="/models/labels.json";
+  const MODEL_CATEGORY_MAP={
+    battery:"battery", cable:"cable", pcb:"pcb",
+    keyboard:"e-waste", microwave:"e-waste", mobile:"e-waste", mouse:"e-waste",
+    player:"e-waste", printer:"e-waste", television:"e-waste", washing_machine:"e-waste"
+  };
+  let offlineClassifier=null;
+  let offlineClassifierPromise=null;
+  let offlineModelConfig=null;
+
+  async function loadOfflineClassifier(){
+    if(offlineClassifier)return offlineClassifier;
+    if(offlineClassifierPromise)return offlineClassifierPromise;
+    offlineClassifierPromise=(async()=>{
+      if(!window.tf || !window.tflite) throw new Error("Offline TFLite runtime is not loaded.");
+      if(typeof window.tflite.setWasmPath==="function"){
+        window.tflite.setWasmPath("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/");
+      }
+      await window.tf.ready();
+      const labelResponse=await fetch(OFFLINE_LABELS_URL,{cache:"no-store"});
+      if(!labelResponse.ok)throw new Error("Offline model labels are missing.");
+      offlineModelConfig=await labelResponse.json();
+      if(!Array.isArray(offlineModelConfig.labels)||offlineModelConfig.labels.length!==11){
+        throw new Error("Offline model labels are invalid.");
+      }
+      offlineClassifier=await window.tflite.loadTFLiteModel(OFFLINE_MODEL_URL,{numThreads:1});
+      return offlineClassifier;
+    })().catch(err=>{
+      offlineClassifierPromise=null;
+      throw err;
+    });
+    return offlineClassifierPromise;
+  }
+
+  async function classifyOfflinePhoto(file){
+    const model=await loadOfflineClassifier();
+    const labels=offlineModelConfig.labels;
+    const size=Number(offlineModelConfig.input_size||224);
+    const normalization=offlineModelConfig.normalization||"minus_one_to_one";
+    const img=await createImageBitmap(file);
+    const canvas=document.createElement("canvas");
+    canvas.width=size;canvas.height=size;
+    const ctx=canvas.getContext("2d",{willReadFrequently:false});
+    ctx.drawImage(img,0,0,size,size);
+    img.close?.();
+    let input=window.tf.browser.fromPixels(canvas).toFloat();
+    if(normalization==="minus_one_to_one") input=window.tf.div(input,127.5).sub(1);
+    else if(normalization==="zero_to_one") input=window.tf.div(input,255);
+    else throw new Error("Unsupported model normalization.");
+    input=input.expandDims(0);
+    let output=model.predict(input);
+    if(Array.isArray(output))output=output[0];
+    if(output && !output.dataSync && typeof output==="object"){
+      const key=Object.keys(output)[0]; output=output[key];
+    }
+    const scores=Array.from(output.dataSync());
+    input.dispose();
+    output.dispose?.();
+    let bestIndex=0;
+    for(let i=1;i<scores.length;i++)if(scores[i]>scores[bestIndex])bestIndex=i;
+    const confidence=Number(scores[bestIndex]||0);
+    const rawLabel=String(labels[bestIndex]||"unknown");
+    const label=rawLabel.replace(/\\s+/g," ").trim().toLowerCase();
+    const category=MODEL_CATEGORY_MAP[label]||"e-waste";
+    return {category,itemType:rawLabel.replace(/_/g," "),condition:"used",notes:"Offline on-device model prediction.",confidence,offline:true};
+  }
+
   async function analyzeScrapPhoto(file){
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
     if(state)state.textContent=tr("analyzingPhoto");
     if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
     try{
-      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.detail?`${data.error||"AI analysis failed"}: ${data.detail}`:(data.error||"AI analysis failed"));
-      const result=data.result||{};
+      let result=null;
+      let offlineError=null;
+      try{
+        result=await classifyOfflinePhoto(file);
+      }catch(err){
+        offlineError=err;
+        console.warn("Offline image model unavailable:",err);
+      }
+      if(!result && navigator.onLine){
+        const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+        const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.detail?String(data.detail):(data.error||"AI analysis failed"));
+        result=data.result||{};
+      }
+      if(!result){
+        throw offlineError||new Error("Offline image model is not ready on this device.");
+      }
       if(result.category)document.getElementById("cat").value=result.category;
       if(result.itemType)document.getElementById("itemType").value=result.itemType;
-      if(result.condition){const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;}
+      if(result.condition){
+        const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");
+        el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;
+      }
       if(result.notes)document.getElementById("notes").value=result.notes;
-      document.getElementById("cat").dispatchEvent(new Event("input"));document.getElementById("weight").dispatchEvent(new Event("input"));
-      if(state)state.textContent=tr("photoReady")+(result.confidence?" · "+Math.round(Number(result.confidence)*100)+"%":"");
+      document.getElementById("cat").dispatchEvent(new Event("input"));
+      document.getElementById("weight").dispatchEvent(new Event("input"));
+      const pct=Number(result.confidence);
+      const source=result.offline?" · "+(lang==="hi"?"ऑफलाइन AI":lang==="mr"?"ऑफलाइन AI":"Offline AI"):"";
+      if(state)state.textContent=tr("photoReady")+(Number.isFinite(pct)&&pct>0?" · "+Math.round(pct*100)+"%":"")+source;
       toast("✓ "+tr("photoReady"));
-    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(tr("photoError"));}
-    finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
+    }catch(err){
+      console.error(err);
+      if(state)state.textContent=tr("photoError");
+      toast(tr("photoError"));
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}
+    }
   }
+
   function listScreen(){
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
