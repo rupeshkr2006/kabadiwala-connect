@@ -1,0 +1,30 @@
+name: Validate App JS
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "main.mjs"
+      - "public/main.mjs"
+      - "api/**"
+      - ".github/workflows/validate-js.yml"
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check main
+        run: node --check main.mjs
+      - name: Check public main
+        run: node --check public/main.mjs
+      - name: Check APIs
+        shell: bash
+        run: |
+          for f in api/*.js; do
+            node --check "$f"
+          done
