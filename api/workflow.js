@@ -53,9 +53,23 @@ export default async function handler(req,res){
       return res.status(200).json({rows:publicRows});
     }
     if(req.method==="GET"&&action==="ledger"){
-      const rows=await rest("/rest/v1/platform_earnings?collector_phone=eq."+encodeURIComponent(session.phone)+"&select=*&order=created_at.desc");
-      const total=rows.reduce((a,x)=>a+Number(x.amount||0),0),paid=rows.filter(x=>x.status==="paid").reduce((a,x)=>a+Number(x.amount||0),0),pending=total-paid;
-      return res.status(200).json({rows,total,paid,pending});
+      const paidRows=await rest("/rest/v1/platform_earnings?collector_phone=eq."+encodeURIComponent(session.phone)+"&select=*&order=created_at.desc").catch(()=>[]);
+      const paidByTx=new Map((paidRows||[]).map(x=>[String(x.transaction_reference||""),x]));
+      const txRows=await rest("/rest/v1/platform_transactions?collector_phone=eq."+encodeURIComponent(session.phone)+"&status=neq.cancelled&select=transaction_reference,lot_reference,quoted_price,final_price,payment_status,payment_method,status,updated_at,created_at&order=created_at.desc&limit=100").catch(()=>[]);
+      const pendingRows=(txRows||[]).filter(tx=>{
+        const ref=String(tx.transaction_reference||"");
+        return !paidByTx.has(ref)&&String(tx.payment_status||"").toLowerCase()!=="paid"&&Number(tx.final_price||tx.quoted_price||0)>0;
+      }).map(tx=>({
+        transaction_reference:tx.transaction_reference,
+        amount:Number(tx.final_price||tx.quoted_price||0),
+        status:"pending",
+        payment_method:null,
+        created_at:tx.updated_at||tx.created_at
+      }));
+      const rows=[...(paidRows||[]),...pendingRows].sort((a,b)=>new Date(b.paid_at||b.created_at||0)-new Date(a.paid_at||a.created_at||0));
+      const paid=(paidRows||[]).reduce((a,x)=>a+Number(x.amount||0),0);
+      const pending=pendingRows.reduce((a,x)=>a+Number(x.amount||0),0);
+      return res.status(200).json({rows,total:paid+pending,paid,pending});
     }
     if(req.method==="GET"&&action==="transactions"){
       const filter=session.role==="collector"?"collector_phone=eq."+encodeURIComponent(session.phone):"";
