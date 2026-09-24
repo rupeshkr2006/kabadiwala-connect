@@ -1,5 +1,5 @@
 const DB_NAME = "kabadiwala-connect";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function openDB(){
   return new Promise((resolve,reject)=>{
@@ -8,6 +8,7 @@ function openDB(){
       const db=req.result;
       if(!db.objectStoreNames.contains("state")) db.createObjectStore("state");
       if(!db.objectStoreNames.contains("outbox")) db.createObjectStore("outbox",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("models")) db.createObjectStore("models");
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
@@ -29,6 +30,26 @@ export async function getState(key){
   const db=await openDB();
   return new Promise((resolve,reject)=>{
     const req=db.transaction("state").objectStore("state").get(key);
+    req.onsuccess=()=>resolve(req.result ?? null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+export async function putModel(key,value){
+  if(!("indexedDB" in window)) return;
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction("models","readwrite");
+    tx.objectStore("models").put(value,key);
+    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+  });
+}
+
+export async function getModel(key){
+  if(!("indexedDB" in window)) return null;
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction("models").objectStore("models").get(key);
     req.onsuccess=()=>resolve(req.result ?? null);
     req.onerror=()=>reject(req.error);
   });
