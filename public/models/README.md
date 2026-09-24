@@ -1,21 +1,22 @@
 # Local AI model assets
 
-Place the verified classifier assets in this directory:
+The application expects:
 
 - `ewaste_mobilenetv2_fp16.tflite`
 - `labels.json`
 
-Expected `labels.json` format:
+Confirmed label order for the current team model:
 
-```json
-{
-  "labels": [
-    "class_for_output_0",
-    "class_for_output_1"
-  ]
-}
-```
+0. battery
+1. cable
+2. keyboard
+3. microwave
+4. mobile
+5. mouse
+6. pcb
+7. player
+8. printer
+9. television
+10. washing_machine
 
-The supplied model currently exposes **11 output classes**, while the supplied dataset manifest exposes only **3 classes**. Do not create `labels.json` until the training team confirms the real index-to-label mapping.
-
-The model is about 4.8 MB. Keep it out of the browser service-worker app shell until the model has been verified and the app has a deliberate cache strategy.
+The model is designed for 224x224 RGB float32 input. The app uses `minus_one_to_one` preprocessing; this should match the training pipeline. The model runs locally in the browser through TensorFlow.js TFLite/WASM, with Gemini retained as an online fallback. The service worker caches the model and runtime after the PWA is opened online once.
