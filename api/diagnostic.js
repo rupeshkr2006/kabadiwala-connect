@@ -7,12 +7,12 @@ export default async function handler(req,res){
     const source=fs.readFileSync(p,"utf8").replace(/^import[^;]+;\s*/,"");
     if(String(req.query?.mode||"")==="import"){
       const callbacks=[];
-      globalThis.document={addEventListener(name,fn){if(name==="DOMContentLoaded")callbacks.push(fn);},getElementById(){return null;}};
-      globalThis.window={addEventListener(){},removeEventListener(){},location:{hash:""}};
-      globalThis.navigator={onLine:true};
-      globalThis.localStorage={getItem(){return null},setItem(){},removeItem(){}};
-      globalThis.sessionStorage=globalThis.localStorage;
-      globalThis.location={hash:""};
+      Object.defineProperty(globalThis,"document",{configurable:true,value:{addEventListener(name,fn){if(name==="DOMContentLoaded")callbacks.push(fn);},getElementById(){return null;}}});
+      Object.defineProperty(globalThis,"window",{configurable:true,value:{addEventListener(){},removeEventListener(){},location:{hash:""}}});
+      Object.defineProperty(globalThis,"navigator",{configurable:true,value:{onLine:true}});
+      Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem(){return null},setItem(){},removeItem(){}}});
+      Object.defineProperty(globalThis,"sessionStorage",{configurable:true,value:globalThis.localStorage});
+      Object.defineProperty(globalThis,"location",{configurable:true,value:{hash:""}});
       await import("file://"+p+"?diag="+Date.now());
       return res.status(200).json({ok:true,stage:"import"});
     }
