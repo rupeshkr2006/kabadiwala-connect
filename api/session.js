@@ -4,7 +4,7 @@ const cookieName="kc_session";
 const maxAge=30*24*60*60;
 const b64=s=>Buffer.from(s).toString("base64url");
 const unb64=s=>Buffer.from(s,"base64url").toString();
-function secret(){return String(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();}
+function secret(){return String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();}
 function sign(body){return createHmac("sha256",secret()).update(body).digest("base64url");}
 function tokenFor(payload){const body=b64(JSON.stringify(payload));return body+"."+sign(body);}
 function verify(token){
