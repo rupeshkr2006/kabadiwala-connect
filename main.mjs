@@ -16,6 +16,16 @@ document.addEventListener("DOMContentLoaded", () => {
   let marketLatest = [];
   let marketTrends = [];
   let marketLoaded = false;
+  const FALLBACK_MARKET = [
+    {material_name:"Batteries",buying_price:105,unit:"kg",market_min:94.5,market_max:115.5,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"Cables",buying_price:440,unit:"kg",market_min:396,market_max:484,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"CRT",buying_price:65,unit:"kg",market_min:58.5,market_max:71.5,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"LCD / Display",buying_price:130,unit:"kg",market_min:117,market_max:143,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"Magnet Assemblies",buying_price:520,unit:"kg",market_min:468,market_max:572,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"Mixed Plastics",buying_price:52,unit:"kg",market_min:46.8,market_max:57.2,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"Motors",buying_price:190,unit:"kg",market_min:171,market_max:209,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
+    {material_name:"PCB",buying_price:355,unit:"kg",market_min:319.5,market_max:390.5,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"}
+  ];
   let recyclers = [];
   let recyclersLoaded = false;
   const FALLBACK_RECYCLERS = [
@@ -179,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketLatest=Array.isArray(data.latest)?data.latest:[]; marketTrends=Array.isArray(data.trends)?data.trends:[];
       await putState("market",{latest:marketLatest,trends:marketTrends,updatedAt:Date.now()}).catch(()=>{});
       if(rerender && location.hash==="#market")render();
-    }catch(err){console.warn("Market data:",err);}
+    }catch(err){console.warn("Market data:",err);if(!marketLatest.length)marketLatest=FALLBACK_MARKET;await putState("market",{latest:marketLatest,trends:marketTrends,updatedAt:Date.now()}).catch(()=>{});if(rerender && location.hash==="#market")render();}
   }
   function formatDate(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString(lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN",{day:"2-digit",month:"short",year:"numeric"});}
   function marketScreen(){
