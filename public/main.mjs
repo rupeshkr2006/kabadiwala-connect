@@ -423,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(window.L)initMap("miniMap",true);
     document.getElementById("loc").onclick=getLocation;
     document.getElementById("mapPick").onclick=()=>enableMapPick("miniMap");
-    document.getElementById("setupForm").onsubmit=e=>{e.preventDefault();profile={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};if(isR){profile.business=document.getElementById("business").value;profile.materials=document.getElementById("materials").value;}save();sessionReady=false;ensureSession().catch(()=>{});loadRecyclerData({force:true});go("dashboard");};
+    document.getElementById("setupForm").onsubmit=e=>{e.preventDefault();profile={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};if(isR){profile.business=document.getElementById("business").value;profile.materials=document.getElementById("materials").value;}save();sessionReady=false;ensureSession().catch(()=>{});syncPending().then(()=>loadRecyclerData({force:true}));go("dashboard");};
   }
   function dashboard(){
     if(role==="collector") return collectorDash();
