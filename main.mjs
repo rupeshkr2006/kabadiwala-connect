@@ -18,6 +18,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let marketLoaded = false;
   let recyclers = [];
   let recyclersLoaded = false;
+  const FALLBACK_RECYCLERS = [
+    {external_id:"AP-REC-001",facility_name:"Green Waves Environmental Solution",address:"Sy. No. 43/1, Mindi (V), Gajuwaka (M), Visakhapatnam",city:"Visakhapatnam",district:"Visakhapatnam",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:50},
+    {external_id:"AP-REC-002",facility_name:"Apna Bhoomi E-Waste Management Services",address:"Sy. No. 119, Near Bharat Junction, Kusalapuram (V), Etcherla (M), Srikakulam",city:"Srikakulam",district:"Srikakulam",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:40},
+    {external_id:"AP-REC-003",facility_name:"Clean Earth Green Earth Solutions",address:"Krishna District",city:"Vijayawada",district:"Krishna",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:20},
+    {external_id:"AP-REC-004",facility_name:"E-Parisaraa Pvt Ltd",address:"Plot No. 42A/4, Sy. No. 285/288, Gollapuram (V), Hindupuram (M), Anantapur",city:"Anantapur",district:"Anantapur",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","CRT","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:45},
+    {external_id:"AP-REC-005",facility_name:"Sungeel India Recycling Pvt Ltd",address:"Plot No. 59C & 59D, APIIC Industrial Park, Gollapuram (V), Hindupur (M), Anantapur",city:"Anantapur",district:"Anantapur",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:55}
+  ];
 
   const T = {
     en: {
@@ -154,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const res=await fetch("/api/recyclers",{cache:"no-store"});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Recycler data unavailable");
       recyclers=Array.isArray(data.recyclers)?data.recyclers:[];await putState("recyclers",recyclers).catch(()=>{});
       if(rerender && location.hash==="#recyclers")render();
-    }catch(err){console.warn("Recycler directory:",err);}
+    }catch(err){console.warn("Recycler directory:",err);if(!recyclers.length)recyclers=FALLBACK_RECYCLERS;await putState("recyclers",recyclers).catch(()=>{});if(rerender && location.hash==="#recyclers")render();}
   }
   function recyclerScreen(){
     const rows=recyclers||[];
@@ -222,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     catch{if(!r.transactionReference)r.transactionReference="TX-"+Date.now().toString(36).toUpperCase();enqueue({id:"transaction:"+r.transactionReference,type:"transaction",data:{transaction_reference:r.transactionReference,lot_reference:r.lotReference,collector_phone:accountId,recycler_external_id:r.recyclerExternalId||null,quoted_price:r.currentOffer,final_price:r.currentOffer,payment_method:null,payment_status:"pending",status:"accepted",collection_address:r.address,collection_latitude:r.lat,collection_longitude:r.lng,collected_at:r.collectedAt||new Date().toISOString()}}).catch(()=>{});}
   }
   async function showMatches(r){
-    const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)}).catch(()=>({rows:[]}));
+    const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)}).catch(()=>({rows:recyclers.filter(x=>(x.materials_accepted||[]).some(m=>String(m).toLowerCase().includes(String(r.category||"").toLowerCase())||String(r.category||"").toLowerCase().includes(String(m).toLowerCase())||String(r.category||"").toLowerCase()==="e-waste"))}));
     const rows=data.rows||[];const old=document.getElementById("matchModal");if(old)old.remove();
     const modal=document.createElement("div");modal.id="matchModal";modal.className="map-modal";
     const cards=rows.length?rows.map(x=>'<article class="match-card"><div><strong>'+esc(x.facility_name)+'</strong><small>'+esc(x.city||x.district||"")+' · '+(x.distance_km==null?"Location not available":x.distance_km+" km")+'</small><small>Score: '+esc(x.match_score)+' · '+esc(x.authorization_status||"")+'</small><small>Pickup: '+(x.pickup_available?"Yes":"No")+'</small></div><button class="primary" data-select-recycler="'+esc(x.external_id)+'">'+tr("select")+'</button></article>').join(""):'<div class="empty">'+tr("noMarket")+'</div>';
