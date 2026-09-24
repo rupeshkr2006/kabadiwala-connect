@@ -544,7 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
           pickupAvailable:document.getElementById("pickupAvailable").value!=="no",serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value});
       }
       profile=next;save();sessionReady=false;
-      if(isR&&navigator.onLine){try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}catch(err){console.warn(err);toast(err.message||tr("photoError"));}}
+      if(isR&&navigator.onLine){try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}catch(err){console.warn(err);toast(err.message||tr("photoError"));}}else if(isR){enqueue({id:"recycler_profile:"+accountId,type:"recycler_profile",data:{...profile,recycler_profile_update:true,phone:accountId}}).catch(()=>{});}
       await syncPending();loadRecyclerData({force:true});go("dashboard");
     };
   }
@@ -593,6 +593,25 @@ document.addEventListener("DOMContentLoaded", () => {
   function requestCard(r){
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
+  async function loadExternalScript(src){
+    if([...document.scripts].some(x=>x.src===src)||document.querySelector('script[data-runtime="'+src+'"]'))return;
+    await new Promise((resolve,reject)=>{
+      const script=document.createElement("script");script.src=src;script.async=true;script.dataset.runtime=src;
+      script.onload=resolve;script.onerror=()=>reject(new Error("Could not load runtime: "+src));
+      document.head.appendChild(script);
+    });
+  }
+  async function ensureLeafletRuntime(){
+    if(window.L)return true;
+    try{await loadExternalScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");return !!window.L;}catch(err){console.warn("Leaflet unavailable:",err);return false;}
+  }
+  async function ensureTFLiteRuntime(){
+    if(window.tf&&window.tflite)return true;
+    await loadExternalScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
+    await loadExternalScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js");
+    return !!(window.tf&&window.tflite);
+  }
+
   const OFFLINE_MODEL_URL="/models/ewaste_mobilenetv2_fp16.tflite";
   const OFFLINE_LABELS_URL="/models/labels.json";
   const MODEL_CATEGORY_MAP={
@@ -608,6 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(offlineClassifier)return offlineClassifier;
     if(offlineClassifierPromise)return offlineClassifierPromise;
     offlineClassifierPromise=(async()=>{
+      await ensureTFLiteRuntime();
       if(!window.tf || !window.tflite) throw new Error("Offline TFLite runtime is not loaded.");
       if(typeof window.tflite.setWasmPath==="function"){
         window.tflite.setWasmPath("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/");
@@ -1070,6 +1090,7 @@ document.addEventListener("DOMContentLoaded", () => {
   syncPending();
   loadMarketData();
   loadRecyclerData();
+  loadRecyclerProfileRemote();
   loadSharedRequests();
   startSharedPolling();
   render();
