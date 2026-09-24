@@ -1,4 +1,4 @@
-import { putState, getState, putModel, getModel, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
 
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"Indicative market rate", minimumPrice:"Minimum expected price", estimated:"Estimated value", itemType:"Item / type", askingPrice:"Your asking price", expectedPrice:"Expected price", currentOffer:"Current offer",
       counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
       counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
-      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the details below.", uploadPhoto:"Upload scrap photo", uploadHint:"Click to choose a photo or take one with your camera.", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting.", installModel:"Install offline AI model", installModelHint:"One-time: choose the trained .tflite file. It stays on this device for offline use.", modelInstalled:"Offline AI model installed", modelMissing:"Offline model is not installed on this device."
+      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the details below.", uploadPhoto:"Upload scrap photo", uploadHint:"Click to choose a photo or take one with your camera.", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
 
     },
     hi: {
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अनुमानित बाजार दर", minimumPrice:"न्यूनतम अनुमानित कीमत", estimated:"अनुमानित मूल्य", itemType:"वस्तु / प्रकार", askingPrice:"आपकी कीमत", expectedPrice:"आपकी अपेक्षित कीमत", currentOffer:"वर्तमान ऑफर",
       counter:"नई कीमत", acceptPrice:"कीमत स्वीकार करें", agreed:"तय कीमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रीसायकलर ऑफर",
       counterHint:"नई कीमत डालें", priceNote:"यह केवल अनुमान है — अंतिम कीमत बातचीत से तय होगी।", priceRequired:"सही कीमत डालें।",
-      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे की जानकारी भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"फोटो चुनने या कैमरा इस्तेमाल करने के लिए दबाएं।", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें.", installModel:"ऑफलाइन AI मॉडल इंस्टॉल करें", installModelHint:"एक बार प्रशिक्षित .tflite फ़ाइल चुनें। यह इस डिवाइस पर ऑफलाइन उपयोग के लिए रहेगी।", modelInstalled:"ऑफलाइन AI मॉडल इंस्टॉल हो गया", modelMissing:"इस डिवाइस पर ऑफलाइन मॉडल इंस्टॉल नहीं है।"
+      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे की जानकारी भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"फोटो चुनने या कैमरा इस्तेमाल करने के लिए दबाएं।", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें."
 
     },
     mr: {
@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अंदाजे बाजार दर", minimumPrice:"किमान अंदाजे किंमत", estimated:"अंदाजे किंमत", itemType:"वस्तू / प्रकार", askingPrice:"तुमची किंमत", expectedPrice:"तुमची अपेक्षित किंमत", currentOffer:"सध्याची ऑफर",
       counter:"नवी किंमत", acceptPrice:"किंमत स्वीकारा", agreed:"ठरलेली किंमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रिसायकलर ऑफर",
       counterHint:"नवी किंमत टाका", priceNote:"ही फक्त अंदाजे किंमत आहे — अंतिम किंमत चर्चेने ठरेल.", priceRequired:"योग्य किंमत टाका.",
-      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील माहिती भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"फोटो निवडण्यासाठी किंवा कॅमेरा वापरण्यासाठी दाबा.", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा.", installModel:"ऑफलाइन AI मॉडेल इंस्टॉल करा", installModelHint:"एकदा प्रशिक्षित .tflite फाइल निवडा. ती या डिव्हाइसवर ऑफलाइन वापरासाठी राहील.", modelInstalled:"ऑफलाइन AI मॉडेल इंस्टॉल झाले", modelMissing:"या डिव्हाइसवर ऑफलाइन मॉडेल इंस्टॉल केलेले नाही."
+      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील माहिती भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"फोटो निवडण्यासाठी किंवा कॅमेरा वापरण्यासाठी दाबा.", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा."
 
     }
   };
@@ -171,13 +171,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function recyclerScreen(){
     const rows=recyclers||[];
-    const cards=rows.length?'<div class="recycler-grid">'+rows.map(x=>{
-      const verified=!!x.verification_badge||String(x.verification_status||"").toLowerCase()==="verified";
-      return '<article class="panel recycler-card"><div class="recycler-head"><div><h2>'+esc(x.facility_name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>'+esc(x.city||x.district||"Andhra Pradesh")+'</p></div><span class="status accepted">'+(verified?tr("verified"):tr("notVerified"))+'</span></div><p class="recycler-address">'+esc(x.address||"")+'</p><div class="recycler-chips"><span>'+tr("accepts")+': '+esc((x.materials_accepted||[]).join(", "))+'</span><span>'+tr("pickupAvailable")+': '+(x.pickup_available?"Yes":"No")+'</span><span>'+tr("serviceArea")+': '+esc(x.service_area_km?x.service_area_km+" km":"—")+'</span></div><p class="market-meta">'+tr("verifiedSource")+': '+esc(x.authorization_source||"—")+'</p></article>';
-    }).join("")+'</div>':'<div class="empty panel">'+tr("noRecyclers")+'</div>';
+    const cards=rows.length?'<div class="recycler-grid">'+rows.map(x=>{const verified=!!x.verification_badge||String(x.verification_status||"").toLowerCase()==="verified";return '<article class="panel recycler-card"><div class="recycler-head"><div><h2>'+esc(x.facility_name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>'+esc(x.city||x.district||"Andhra Pradesh")+'</p></div><span class="status accepted">'+(verified?tr("verified"):tr("notVerified"))+'</span></div><p class="recycler-address">'+esc(x.address||"")+'</p><div class="recycler-chips"><span>'+tr("accepted")+': '+esc((x.materials_accepted||[]).join(", "))+'</span><span>'+tr("pickupAvailable")+': '+(x.pickup_available?"Yes":"No")+'</span><span>'+tr("serviceArea")+': '+esc(x.service_area_km?x.service_area_km+" km":"—")+'</span></div><p class="market-meta">'+tr("verifiedSource")+': '+esc(x.authorization_source||"—")+'</p></article>';}).join("")+'</div>':'<div class="empty panel">'+tr("noRecyclers")+'</div>';
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("recyclers")+'</p><h1>'+tr("nearbyRecyclers")+'</h1><p>★ '+tr("verified")+' · '+tr("notVerified")+'</p></div><button class="secondary" id="refreshRecyclers">↻ '+tr("refresh")+'</button></section>'+cards+'</main>';
     bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}
   }
+
   async function loadSharedRequests({rerender=false}={}){
     if(sharedRefreshing||!navigator.onLine||!user?.verified)return;
     sharedRefreshing=true;
@@ -227,59 +225,24 @@ document.addEventListener("DOMContentLoaded", () => {
     bindShell();document.getElementById("refreshMarket").onclick=()=>loadMarketData({rerender:true,force:true});if(!marketLoaded){marketLoaded=true;loadMarketData({rerender:true,force:true});}
   }
 
-  T.en.admin="Admin"; T.en.adminPanel="Admin panel"; T.en.verifyRecyclers="Recycler verification"; T.en.verified="Verified"; T.en.notVerified="Not verified"; T.en.verify="Verify"; T.en.reject="Reject"; T.en.suspend="Suspend"; T.en.documents="Documents"; T.en.documentRequired="Relevant documents"; T.en.viewDocument="View document"; T.en.noDocuments="No documents uploaded."; T.en.refresh="Refresh"; T.en.summary="Overview"; T.en.allData="All platform data"; T.en.collectors="Collectors"; T.en.recyclers="Recyclers"; T.en.lots="Requests / lots"; T.en.offers="Offers"; T.en.transactions="Transactions"; T.en.handovers="Handovers"; T.en.earnings="Earnings"; T.en.pendingVerification="Pending verification"; T.en.verifiedRecyclers="Verified recyclers"; T.en.registrationNumber="Registration number"; T.en.gstNumber="GST number"; T.en.authorizationNumber="E-waste authorization number"; T.en.authorizationType="Authorization type"; T.en.authorizationExpiry="Authorization expiry"; T.en.contactEmail="Contact email"; T.en.facilityAddress="Facility address"; T.en.pickupAvailable="Pickup available"; T.en.serviceArea="Service area"; T.en.offeredRateNotes="Rate / offer notes"; T.en.upload="Upload"; T.en.saveProfile="Save recycler details"; T.en.reverification="Any profile/document change sends the recycler back to pending verification.";
-  T.hi.admin="एडमिन"; T.hi.adminPanel="एडमिन पैनल"; T.hi.verifyRecyclers="रीसायकलर सत्यापन"; T.hi.verified="सत्यापित"; T.hi.notVerified="सत्यापित नहीं"; T.hi.verify="सत्यापित करें"; T.hi.reject="अस्वीकार"; T.hi.suspend="निलंबित"; T.hi.documents="दस्तावेज़"; T.hi.documentRequired="जरूरी दस्तावेज़"; T.hi.viewDocument="दस्तावेज़ देखें"; T.hi.noDocuments="कोई दस्तावेज़ अपलोड नहीं है।"; T.hi.refresh="रिफ्रेश"; T.hi.summary="अवलोकन"; T.hi.allData="सभी प्लेटफॉर्म डेटा"; T.hi.collectors="कलेक्टर"; T.hi.recyclers="रीसायकलर"; T.hi.lots="रिक्वेस्ट / लॉट"; T.hi.offers="ऑफर"; T.hi.transactions="लेन-देन"; T.hi.handovers="हैंडओवर"; T.hi.earnings="कमाई"; T.hi.pendingVerification="सत्यापन लंबित"; T.hi.verifiedRecyclers="सत्यापित रीसायकलर"; T.hi.registrationNumber="रजिस्ट्रेशन नंबर"; T.hi.gstNumber="GST नंबर"; T.hi.authorizationNumber="ई-वेस्ट अनुमति नंबर"; T.hi.authorizationType="अनुमति प्रकार"; T.hi.authorizationExpiry="अनुमति समाप्ति"; T.hi.contactEmail="ईमेल"; T.hi.facilityAddress="फैसिलिटी पता"; T.hi.pickupAvailable="पिकअप उपलब्ध"; T.hi.serviceArea="सेवा क्षेत्र"; T.hi.offeredRateNotes="रेट / ऑफर नोट्स"; T.hi.upload="अपलोड"; T.hi.saveProfile="रीसायकलर विवरण सेव करें"; T.hi.reverification="प्रोफ़ाइल/दस्तावेज़ बदलने पर फिर से सत्यापन जरूरी होगा।";
-  T.mr.admin="अॅडमिन"; T.mr.adminPanel="अॅडमिन पॅनेल"; T.mr.verifyRecyclers="रिसायकलर पडताळणी"; T.mr.verified="पडताळलेले"; T.mr.notVerified="पडताळलेले नाही"; T.mr.verify="पडताळा"; T.mr.reject="नकार"; T.mr.suspend="निलंबित"; T.mr.documents="कागदपत्रे"; T.mr.documentRequired="आवश्यक कागदपत्रे"; T.mr.viewDocument="कागदपत्र पहा"; T.mr.noDocuments="कागदपत्रे अपलोड केलेली नाहीत."; T.mr.refresh="रिफ्रेश"; T.mr.summary="आढावा"; T.mr.allData="सर्व प्लॅटफॉर्म डेटा"; T.mr.collectors="कलेक्टर"; T.mr.recyclers="रिसायकलर"; T.mr.lots="विनंत्या / लॉट"; T.mr.offers="ऑफर"; T.mr.transactions="व्यवहार"; T.mr.handovers="हँडओव्हर"; T.mr.earnings="कमाई"; T.mr.pendingVerification="पडताळणी प्रलंबित"; T.mr.verifiedRecyclers="पडताळलेले रिसायकलर"; T.mr.registrationNumber="नोंदणी क्रमांक"; T.mr.gstNumber="GST क्रमांक"; T.mr.authorizationNumber="ई-वेस्ट परवानगी क्रमांक"; T.mr.authorizationType="परवानगी प्रकार"; T.mr.authorizationExpiry="परवानगी समाप्ती"; T.mr.contactEmail="ईमेल"; T.mr.facilityAddress="फॅसिलिटी पत्ता"; T.mr.pickupAvailable="पिकअप उपलब्ध"; T.mr.serviceArea="सेवा क्षेत्र"; T.mr.offeredRateNotes="रेट / ऑफर नोट्स"; T.mr.upload="अपलोड"; T.mr.saveProfile="रिसायकलर माहिती सेव्ह करा"; T.mr.reverification="प्रोफाइल/कागदपत्र बदलल्यावर पुन्हा पडताळणी आवश्यक.";
+  T.en.admin="Admin"; T.en.adminPanel="Admin panel"; T.en.verifyRecyclers="Recycler verification"; T.en.verified="Verified"; T.en.notVerified="Not verified"; T.en.verify="Verify"; T.en.reject="Reject"; T.en.suspend="Suspend"; T.en.documents="Documents"; T.en.noDocuments="No documents uploaded."; T.en.refresh="Refresh"; T.en.summary="Overview"; T.en.allData="All platform data"; T.en.collectors="Collectors"; T.en.recyclers="Recyclers"; T.en.lots="Requests / lots"; T.en.offers="Offers"; T.en.transactions="Transactions"; T.en.handovers="Handovers"; T.en.pendingVerification="Pending verification"; T.en.verifiedRecyclers="Verified recyclers"; T.en.registrationNumber="Registration number"; T.en.gstNumber="GST number"; T.en.authorizationNumber="E-waste authorization number"; T.en.authorizationType="Authorization type"; T.en.authorizationExpiry="Authorization expiry"; T.en.contactEmail="Contact email"; T.en.facilityAddress="Facility address"; T.en.pickupAvailable="Pickup available"; T.en.serviceArea="Service area"; T.en.offeredRateNotes="Rate / offer notes"; T.en.upload="Upload"; T.en.saveProfile="Save recycler details"; T.en.reverification="Any profile/document change sends the recycler back to pending verification.";
+  T.hi.admin="एडमिन"; T.hi.adminPanel="एडमिन पैनल"; T.hi.verifyRecyclers="रीसायकलर सत्यापन"; T.hi.verified="सत्यापित"; T.hi.notVerified="सत्यापित नहीं"; T.hi.verify="सत्यापित करें"; T.hi.reject="अस्वीकार"; T.hi.suspend="निलंबित"; T.hi.documents="दस्तावेज़"; T.hi.noDocuments="कोई दस्तावेज़ अपलोड नहीं है।"; T.hi.refresh="रिफ्रेश"; T.hi.summary="अवलोकन"; T.hi.allData="सभी प्लेटफॉर्म डेटा"; T.hi.collectors="कलेक्टर"; T.hi.recyclers="रीसायकलर"; T.hi.lots="रिक्वेस्ट / लॉट"; T.hi.offers="ऑफर"; T.hi.transactions="लेन-देन"; T.hi.handovers="हैंडओवर"; T.hi.pendingVerification="सत्यापन लंबित"; T.hi.verifiedRecyclers="सत्यापित रीसायकलर"; T.hi.registrationNumber="रजिस्ट्रेशन नंबर"; T.hi.gstNumber="GST नंबर"; T.hi.authorizationNumber="ई-वेस्ट अनुमति नंबर"; T.hi.authorizationType="अनुमति प्रकार"; T.hi.authorizationExpiry="अनुमति समाप्ति"; T.hi.contactEmail="ईमेल"; T.hi.facilityAddress="फैसिलिटी पता"; T.hi.pickupAvailable="पिकअप उपलब्ध"; T.hi.serviceArea="सेवा क्षेत्र"; T.hi.offeredRateNotes="रेट / ऑफर नोट्स"; T.hi.upload="अपलोड"; T.hi.saveProfile="रीसायकलर विवरण सेव करें"; T.hi.reverification="प्रोफ़ाइल/दस्तावेज़ बदलने पर फिर से सत्यापन जरूरी होगा।";
+  T.mr.admin="अॅडमिन"; T.mr.adminPanel="अॅडमिन पॅनेल"; T.mr.verifyRecyclers="रिसायकलर पडताळणी"; T.mr.verified="पडताळलेले"; T.mr.notVerified="पडताळलेले नाही"; T.mr.verify="पडताळा"; T.mr.reject="नकार"; T.mr.suspend="निलंबित"; T.mr.documents="कागदपत्रे"; T.mr.noDocuments="कागदपत्रे अपलोड केलेली नाहीत."; T.mr.refresh="रिफ्रेश"; T.mr.summary="आढावा"; T.mr.allData="सर्व प्लॅटफॉर्म डेटा"; T.mr.collectors="कलेक्टर"; T.mr.recyclers="रिसायकलर"; T.mr.lots="विनंत्या / लॉट"; T.mr.offers="ऑफर"; T.mr.transactions="व्यवहार"; T.mr.handovers="हँडओव्हर"; T.mr.pendingVerification="पडताळणी प्रलंबित"; T.mr.verifiedRecyclers="पडताळलेले रिसायकलर"; T.mr.registrationNumber="नोंदणी क्रमांक"; T.mr.gstNumber="GST क्रमांक"; T.mr.authorizationNumber="ई-वेस्ट परवानगी क्रमांक"; T.mr.authorizationType="परवानगी प्रकार"; T.mr.authorizationExpiry="परवानगी समाप्ती"; T.mr.contactEmail="ईमेल"; T.mr.facilityAddress="फॅसिलिटी पत्ता"; T.mr.pickupAvailable="पिकअप उपलब्ध"; T.mr.serviceArea="सेवा क्षेत्र"; T.mr.offeredRateNotes="रेट / ऑफर नोट्स"; T.mr.upload="अपलोड"; T.mr.saveProfile="रिसायकलर माहिती सेव्ह करा"; T.mr.reverification="प्रोफाइल/कागदपत्र बदलल्यावर पुन्हा पडताळणी आवश्यक.";
   T.en.matchRecycler="Find recyclers"; T.en.recommended="Recommended recyclers"; T.en.select="Select"; T.en.confirmHandover="Confirm handover"; T.en.payment="Record payment"; T.en.earnings="Earnings"; T.en.totalEarned="Total earned"; T.en.paid="Paid"; T.en.pendingAmount="Pending"; T.en.noEarnings="No earnings yet."; T.en.workflowNote="Handover requires confirmation from both sides."; T.en.paidSuccess="Payment recorded";
   T.hi.matchRecycler="रीसायकलर खोजें"; T.hi.recommended="सुझाए गए रीसायकलर"; T.hi.select="चुनें"; T.hi.confirmHandover="हैंडओवर की पुष्टि करें"; T.hi.payment="भुगतान दर्ज करें"; T.hi.earnings="कमाई"; T.hi.totalEarned="कुल कमाई"; T.hi.paid="भुगतान हुआ"; T.hi.pendingAmount="पेंडिंग"; T.hi.noEarnings="अभी कोई कमाई नहीं।"; T.hi.workflowNote="हैंडओवर के लिए दोनों पक्षों की पुष्टि जरूरी है।"; T.hi.paidSuccess="भुगतान दर्ज हुआ";
   T.mr.matchRecycler="रिसायकलर शोधा"; T.mr.recommended="सुचवलेले रिसायकलर"; T.mr.select="निवडा"; T.mr.confirmHandover="हँडओव्हरची पुष्टी करा"; T.mr.payment="पेमेंट नोंदवा"; T.mr.earnings="कमाई"; T.mr.totalEarned="एकूण कमाई"; T.mr.paid="पेड"; T.mr.pendingAmount="प्रलंबित"; T.mr.noEarnings="अजून कमाई नाही."; T.mr.workflowNote="हँडओव्हरसाठी दोन्ही बाजूंची पुष्टी आवश्यक आहे."; T.mr.paidSuccess="पेमेंट नोंदले";
 
   async function saveRecyclerProfileRemote(){
-    if(role!=="recycler")return null;
-    const payload={
-      name:profile?.name,business_name:profile?.business,preferred_language:lang,
-      general_location:profile?.area,facility_address:profile?.facilityAddress||profile?.area,
-      accepted_materials:String(profile?.materials||"").split(",").map(x=>x.trim()).filter(Boolean),
-      pickup_radius_km:Number(String(profile?.radius||"5").match(/\d+/)?.[0]||5),
-      latitude:pos?.lat??null,longitude:pos?.lng??null,
-      pickup_available:profile?.pickupAvailable!==false,service_area:profile?.serviceArea,
-      registration_number:profile?.registrationNumber,gst_number:profile?.gstNumber,
-      authorization_number:profile?.authorizationNumber,authorization_type:profile?.authorizationType,
-      authorization_expiry:profile?.authorizationExpiry||null,contact_email:profile?.contactEmail,
-      offered_rate_notes:profile?.offeredRateNotes
-    };
+    const p=profile||{};
+    const payload={name:p.name,business_name:p.business,preferred_language:lang,general_location:p.area,facility_address:p.facilityAddress||p.area,accepted_materials:String(p.materials||"").split(",").map(x=>x.trim()).filter(Boolean),pickup_radius_km:Number(String(p.radius||"5").match(/\d+/)?.[0]||5),latitude:pos?.lat??null,longitude:pos?.lng??null,pickup_available:p.pickupAvailable!==false,service_area:p.serviceArea,registration_number:p.registrationNumber,gst_number:p.gstNumber,authorization_number:p.authorizationNumber,authorization_type:p.authorizationType,authorization_expiry:p.authorizationExpiry||null,contact_email:p.contactEmail,offered_rate_notes:p.offeredRateNotes};
     const res=await fetch("/api/recycler-profile?action=save",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(payload)});
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok)throw new Error(data.error||"Could not save recycler profile.");
-    if(data.profile){
-      profile={...profile,business:data.profile.business_name||profile.business,name:data.profile.name||profile.name,
-        area:data.profile.general_location||profile.area,materials:Array.isArray(data.profile.accepted_materials)?data.profile.accepted_materials.join(", "):profile.materials,
-        verificationStatus:data.profile.verification_status,verificationBadge:!!data.profile.verification_badge,
-        documents:data.profile.recycler_documents||profile.documents||[]};
-      save();
-    }
-    return data.profile||null;
+    const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Recycler profile save failed.");
+    profile={...profile,verificationStatus:data.profile?.verification_status||"pending",verificationBadge:!!data.profile?.verification_badge,documents:data.profile?.recycler_documents||profile?.documents||[]};save();return data.profile;
   }
-
   async function loadRecyclerProfileRemote(){
     if(role!=="recycler"||!navigator.onLine)return;
-    try{
-      await ensureSession();
-      const res=await fetch("/api/recycler-profile",{credentials:"same-origin",cache:"no-store"});
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok||!data.profile)return;
-      const p=data.profile;
-      profile={...profile,name:p.name||profile?.name,business:p.business_name||profile?.business,area:p.general_location||profile?.area,
-        facilityAddress:p.facility_address||profile?.facilityAddress,materials:Array.isArray(p.accepted_materials)?p.accepted_materials.join(", "):profile?.materials,
-        radius:(p.pickup_radius_km||5)+" km",registrationNumber:p.registration_number||"",gstNumber:p.gst_number||"",
-        authorizationNumber:p.authorization_number||"",authorizationType:p.authorization_type||"",authorizationExpiry:p.authorization_expiry||"",
-        contactEmail:p.contact_email||"",pickupAvailable:p.pickup_available!==false,serviceArea:p.service_area||"",
-        offeredRateNotes:p.offered_rate_notes||"",verificationStatus:p.verification_status||"pending",verificationBadge:!!p.verification_badge,documents:p.recycler_documents||[]};
-      save();
-      if(location.hash==="#setup"||location.hash==="#profile")render();
-    }catch(err){console.warn("Recycler profile refresh:",err);}
+    try{await ensureSession();const res=await fetch("/api/recycler-profile",{credentials:"same-origin",cache:"no-store"});const data=await res.json().catch(()=>({}));if(!res.ok||!data.profile)return;const p=data.profile;profile={...profile,name:p.name||profile?.name,business:p.business_name||profile?.business,area:p.general_location||profile?.area,facilityAddress:p.facility_address||profile?.facilityAddress,materials:Array.isArray(p.accepted_materials)?p.accepted_materials.join(", "):profile?.materials,radius:(p.pickup_radius_km||5)+" km",registrationNumber:p.registration_number||"",gstNumber:p.gst_number||"",authorizationNumber:p.authorization_number||"",authorizationType:p.authorization_type||"",authorizationExpiry:p.authorization_expiry||"",contactEmail:p.contact_email||"",pickupAvailable:p.pickup_available!==false,serviceArea:p.service_area||"",offeredRateNotes:p.offered_rate_notes||"",verificationStatus:p.verification_status||"pending",verificationBadge:!!p.verification_badge,documents:p.recycler_documents||[]};save();}catch(err){console.warn("Recycler profile refresh:",err);}
   }
-
   async function ensureSession(){
     if(sessionReady)return true;
     if(!user?.verified||!accountId||!role)throw new Error("Session is not ready.");
@@ -329,7 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)}).catch(()=>({rows:recyclers.filter(x=>(x.materials_accepted||[]).some(m=>String(m).toLowerCase().includes(String(r.category||"").toLowerCase())||String(r.category||"").toLowerCase().includes(String(m).toLowerCase())||String(r.category||"").toLowerCase()==="e-waste"))}));
     const rows=data.rows||[];const old=document.getElementById("matchModal");if(old)old.remove();
     const modal=document.createElement("div");modal.id="matchModal";modal.className="map-modal";
-    const cards=rows.length?rows.map(x=>'<article class="match-card"><div><strong>'+esc(x.facility_name)+'</strong><small>'+esc(x.city||x.district||"")+' · '+(x.distance_km==null?"Location not available":x.distance_km+" km")+'</small><small>Score: '+esc(x.match_score)+' · '+esc(x.authorization_status||"")+'</small><small>Pickup: '+(x.pickup_available?"Yes":"No")+'</small><small>'+(x.verification_badge?'★ '+tr("verified"):tr("notVerified"))+'</small></div><button class="primary" data-select-recycler="'+esc(x.external_id)+'">'+tr("select")+'</button></article>').join(""):'<div class="empty">'+tr("noMarket")+'</div>';
+    const cards=rows.length?rows.map(x=>'<article class="match-card"><div><strong>'+esc(x.facility_name)+'</strong><small>'+esc(x.city||x.district||"")+' · '+(x.distance_km==null?"Location not available":x.distance_km+" km")+'</small><small>Score: '+esc(x.match_score)+' · '+esc(x.authorization_status||"")+'</small><small>Pickup: '+(x.pickup_available?"Yes":"No")+'</small></div><button class="primary" data-select-recycler="'+esc(x.external_id)+'">'+tr("select")+'</button></article>').join(""):'<div class="empty">'+tr("noMarket")+'</div>';
     modal.innerHTML='<div class="map-modal-card"><div class="map-modal-head"><div><strong>'+tr("recommended")+'</strong><small>'+esc(r.category)+' · '+esc(r.quantity)+'</small></div><button class="icon-btn" id="closeMatch">×</button></div><div class="match-list">'+cards+'</div></div>';
     document.body.appendChild(modal);document.getElementById("closeMatch").onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove();};
     modal.querySelectorAll("[data-select-recycler]").forEach(b=>b.onclick=()=>{const x=rows.find(q=>q.external_id===b.dataset.selectRecycler);if(x){r.recyclerExternalId=x.external_id;r.recyclerName=x.facility_name;save();toast(x.facility_name);modal.remove();render();}});
@@ -346,44 +309,8 @@ document.addEventListener("DOMContentLoaded", () => {
     try{await apiPost("payment",{transactionReference:r.transactionReference,amount,method});r.agreedPrice=amount;r.status="Completed";r.finalSaleValue=amount;r.paymentStatus="paid";save();render();toast(tr("paidSuccess"));}catch{enqueue({id:"payment:"+r.transactionReference,type:"payment",data:{transaction_reference:r.transactionReference,amount,status:"paid",payment_method:method,payment_reference:null,paid_at:new Date().toISOString()}}).catch(()=>{});r.agreedPrice=amount;r.status="Completed";save();render();toast("Saved offline");}
   }
   async function earningsScreen(){
-    let serverData={rows:[],total:0,paid:0,pending:0};
-    try{serverData=await apiGet("ledger");}catch{}
-
-    const merged=new Map();
-    for(const row of (serverData.rows||[])){
-      const key=String(row.transaction_reference||"");
-      if(key)merged.set(key,row);
-    }
-
-    // Include unsynced local sales so earnings don't appear empty just because
-    // the latest payment/transaction has not reached Supabase yet.
-    for(const r of requests){
-      const key=String(r.transactionReference||r.lotReference||"");
-      if(!key)continue;
-      const status=String(r.status||"").toLowerCase();
-      const finalAmount=Number(r.finalSaleValue||0);
-      const pendingAmount=Number(r.agreedPrice||r.currentOffer||r.expectedPrice||0);
-      if(status==="completed"&&finalAmount>0&&!merged.has(key)){
-        merged.set(key,{transaction_reference:key,amount:finalAmount,status:"paid",payment_method:r.paymentMethod||"cash",paid_at:r.paidAt||r.completedAt||r.collectedAt||null});
-      }else if(!["completed","cancelled"].includes(status)&&pendingAmount>0&&!merged.has(key)){
-        merged.set(key,{transaction_reference:key,amount:pendingAmount,status:"pending",payment_method:null,created_at:r.collectedAt||null});
-      }
-    }
-
-    const rows=[...merged.values()].filter(x=>Number(x.amount||0)>0).sort((a,b)=>
-      new Date(b.paid_at||b.created_at||0)-new Date(a.paid_at||a.created_at||0)
-    );
-    const paid=rows.filter(x=>String(x.status).toLowerCase()==="paid").reduce((a,x)=>a+Number(x.amount||0),0);
-    const pending=rows.filter(x=>String(x.status).toLowerCase()!=="paid").reduce((a,x)=>a+Number(x.amount||0),0);
-    const fmtDate=v=>v?new Date(v).toLocaleString():"—";
-    const cards=rows.map(x=>{
-      const isPaid=String(x.status).toLowerCase()==="paid";
-      return '<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference||"—")+'</span><span>'+fmtDate(x.paid_at||x.created_at)+'</span></div><div class="ledger-meta"><span class="ledger-badge '+(isPaid?"paid":"pending")+'">'+(isPaid?tr("paid"):tr("pendingAmount"))+'</span><span>'+esc(x.payment_method||"—")+'</span></div></div>';
-    }).join("");
-
-    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div><button class="secondary" id="refreshEarnings">↻ '+tr("refreshMarket")+'</button></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(paid)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(paid)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(pending)+'</strong></section></div><section class="panel ledger-list"><div class="ledger-header"><strong>'+tr("earnings")+'</strong><span>'+rows.length+' '+tr("requests")+'</span></div>'+(cards||'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';
-    bindShell();
-    const refresh=document.getElementById("refreshEarnings");if(refresh)refresh.onclick=()=>render();
+    let data={rows:[],total:0,paid:0,pending:0};try{data=await apiGet("ledger");}catch{}
+    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(data.total)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(data.paid)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(data.pending)+'</strong></section></div><section class="panel ledger-list">'+(data.rows?.length?data.rows.map(x=>'<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference)+'</span></div><div><span>'+esc(x.payment_method||"—")+'</span><span>'+esc(x.status)+'</span></div></div>').join(""):'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';bindShell();
   }
 
   const save = () => {
@@ -438,9 +365,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if(requests.length!==before)localStorage.requests=JSON.stringify(requests);
   }
   function topbar(){
-    const adminNav='';
-    const userNav=role==="admin"?'':'<button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button>'+(role==="collector"?'<button data-p="earnings">₹ '+tr("earnings")+'</button>':'')+'<button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button>';
-    return '<header class="top"><a class="brand" href="'+(role==="admin"?"#admin":"#dashboard")+'" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav"><span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="'+(role==="admin"?"admin":"dashboard")+'">'+(role==="admin"?tr("admin"):tr("dashboardNav"))+'</button>'+adminNav+userNav+'<button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Admin")+'</button><select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
+    const isAdmin=role==="admin";
+    return '<header class="top"><a class="brand" href="'+(isAdmin?"#admin":"#dashboard")+'" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav"><span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="'+(isAdmin?"admin":"dashboard")+'">'+(isAdmin?"🛡 "+tr("admin"):tr("dashboardNav"))+'</button>'+(isAdmin?'':'<button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button>'+(role==="collector"?'<button data-p="earnings">₹ '+tr("earnings")+'</button>':'')+'<button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button>')+'<button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button><select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
     const s=A.querySelector(".lang"); if(s){s.value=lang;s.onchange=e=>{lang=e.target.value;save();toast(tr("languageSaved"));render();};}
@@ -454,53 +380,32 @@ document.addEventListener("DOMContentLoaded", () => {
     return phoneScreen();
   }
   function phoneScreen(){
-    A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">Sign in with your mobile number</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" autofocus required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
-    document.getElementById("phoneForm").onsubmit=e=>{
-      e.preventDefault();
-      const p=document.getElementById("phone").value.replace(/\D/g,"");
-      if(p.length!==10)return toast(tr("phoneError"));
-      accountId=p;
-      const existing=accounts[p];
-      user={phone:p,verified:false};
-      role=existing?.role||"";
-      profile=existing?.profile||null;
-      pos=null;
-      save();
-      go("otp");
-    };
+    A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">Sign in with your mobile number</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" autofocus required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><button type="button" class="text-btn admin-demo-login" id="adminDemoLogin">🛡 Admin demo login</button><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
+    const continueLogin=()=>{const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));accountId=p;const existing=accounts[p];user={phone:p,verified:false};role=existing?.role||"";profile=existing?.profile||null;pos=null;save();go("otp");};
+    document.getElementById("phoneForm").onsubmit=e=>{e.preventDefault();continueLogin();};
+    document.getElementById("adminDemoLogin").onclick=()=>{document.getElementById("phone").value="9990000000";continueLogin();};
   }
   function otpScreen(){
     let timer=30;
-    A.innerHTML='<main class="auth"><div class="auth-card"><button class="back" id="change">← '+tr("change")+'</button><p class="eyebrow">VERIFY</p><h1>'+tr("otp")+'</h1><p class="lead">+91 '+esc(user?.phone||"")+'</p><form id="otpForm"><input class="otp-input" id="otp" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code" autofocus required><button class="primary full">'+tr("verify")+' <span>→</span></button></form><div class="otp-meta"><span id="timer">00:30</span><button type="button" id="resend" class="text-btn" disabled>'+tr("resend")+'</button></div><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
+    A.innerHTML='<main class="auth"><div class="auth-card"><button class="back" id="change">← '+tr("change")+'</button><p class="eyebrow">VERIFY</p><h1>'+tr("otp")+'</h1><p class="lead">+91 '+esc(user?.phone||"")+'</p><form id="otpForm"><input class="otp-input" id="otp" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code" autofocus required><button class="primary full">'+tr("verify")+' <span>→</span></button></form><div class="otp-meta"><span id="timer">00:30</span></div><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
     document.getElementById("change").onclick=()=>go("login");
-    const resend=document.getElementById("resend"),timerEl=document.getElementById("timer");
-    const int=setInterval(()=>{timer--;if(timerEl)timerEl.textContent="00:"+String(Math.max(timer,0)).padStart(2,"0");if(timer<=0){clearInterval(int);if(resend)resend.disabled=false;}},1000);
-    resend.onclick=()=>{timer=30;resend.disabled=true;};
+    const timerEl=document.getElementById("timer");const int=setInterval(()=>{timer--;if(timerEl)timerEl.textContent="00:"+String(Math.max(timer,0)).padStart(2,"0");if(timer<=0)clearInterval(int);},1000);
     document.getElementById("otpForm").onsubmit=async e=>{
       e.preventDefault();
-      const otpValue=document.getElementById("otp").value;
-      if(otpValue!=="123456")return toast(tr("otpError"));
+      if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));
       const requestedRole=accounts[accountId]?.role||"collector";
-      let sessionRole=requestedRole;
       try{
-        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:otpValue,role:requestedRole})});
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:requestedRole})});
         const data=await sr.json().catch(()=>({}));
-        if(!sr.ok&&sr.status!==503)return toast(data.error||tr("otpError"));
-        sessionRole=data.role||requestedRole;
-      }catch{ /* local session remains usable for non-admin demo flows when backend is unavailable */ }
-      user.verified=true;
-      const existing=accounts[accountId];
-      role=sessionRole||existing?.role||"";
-      profile=existing?.profile||profile||null;
-      pos=existing?.pos||pos||null;
-      sessionReady=false;
+        if(!sr.ok)return toast(data.error||tr("otpError"));
+        role=data.role||requestedRole;
+      }catch(err){return toast("Could not start session. Please try again.");}
+      user={...(user||{}),verified:true,phone:accountId};profile=accounts[accountId]?.profile||profile||{};pos=accounts[accountId]?.pos||pos||null;sessionReady=true;
       save();
-      if(role){try{await ensureSession();}catch(err){console.warn("Session:",err);}}
-      if(role==="admin"){go("admin");return;}
+      if(role==="admin"){location.hash="admin";render();return;}
       go(role?"dashboard":"role");
     };
   }
-
 
   function roleScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div></div></main>';
@@ -511,35 +416,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if(role==="admin"){go("admin");return;}
     const docs=Array.isArray(profile?.documents)?profile.documents:[];
     const docTypes=[["authorization","E-waste authorization certificate"],["registration","Business / registration certificate"],["gst","GST certificate (if applicable)"],["address_proof","Facility / address proof"]];
-
-    const commonFields=[
-      '<label>'+tr("name")+'<input id="name" value="'+esc(profile?.name||"")+'" required></label>',
-      '<label>'+tr("area")+'<input id="area" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada" required></label>',
-      '<label>'+tr("radius")+'<select id="radius"><option '+(String(profile?.radius||"5").startsWith("5")?"selected":"")+'>5 km</option><option '+(String(profile?.radius||"").startsWith("10")?"selected":"")+'>10 km</option><option '+(String(profile?.radius||"").startsWith("20")?"selected":"")+'>20 km</option></select></label>'
-    ];
-    if(isR){
-      commonFields.splice(1,0,
-        '<label>'+tr("business")+'<input id="business" value="'+esc(profile?.business||"")+'" required></label>',
-        '<label>'+tr("contactEmail")+'<input id="contactEmail" type="email" value="'+esc(profile?.contactEmail||"")+'" placeholder="business@example.com"></label>',
-        '<label>'+tr("facilityAddress")+'<textarea id="facilityAddress" rows="2">'+esc(profile?.facilityAddress||profile?.area||"")+'</textarea></label>',
-        '<label>'+tr("registrationNumber")+'<input id="registrationNumber" value="'+esc(profile?.registrationNumber||"")+'"></label>',
-        '<label>'+tr("gstNumber")+'<input id="gstNumber" value="'+esc(profile?.gstNumber||"")+'"></label>',
-        '<label>'+tr("authorizationNumber")+'<input id="authorizationNumber" value="'+esc(profile?.authorizationNumber||"")+'"></label>',
-        '<label>'+tr("authorizationType")+'<input id="authorizationType" value="'+esc(profile?.authorizationType||"")+'" placeholder="CPCB / SPCB authorization"></label>',
-        '<label>'+tr("authorizationExpiry")+'<input id="authorizationExpiry" type="date" value="'+esc(profile?.authorizationExpiry||"")+'"></label>',
-        '<label>'+tr("materials")+'<input id="materials" value="'+esc(profile?.materials||"PCB, Cable, Battery")+'" placeholder="PCB, Cable, Battery"></label>',
-        '<label>'+tr("pickupAvailable")+'<select id="pickupAvailable"><option value="yes">Yes</option><option value="no">No</option></select></label>',
-        '<label>'+tr("serviceArea")+'<input id="serviceArea" value="'+esc(profile?.serviceArea||"")+'" placeholder="Krishna District"></label>',
-        '<label>'+tr("offeredRateNotes")+'<textarea id="offeredRateNotes" rows="2" placeholder="Optional rates / buying notes">'+esc(profile?.offeredRateNotes||"")+'</textarea></label>'
-      );
-    }
-
-    const docHtml=isR?'<section class="recycler-docs"><h2>'+tr("documentRequired")+'</h2><p class="muted">'+tr("reverification")+'</p>'+docTypes.map(([type,label])=>{
-      const found=docs.find(d=>d.document_type===type);
-      return '<div class="doc-row"><div><strong>'+label+'</strong><small>'+esc(found?.file_name||tr("noDocuments"))+'</small></div><label class="secondary doc-upload">'+tr("upload")+'<input type="file" data-doc-type="'+type+'" accept=".pdf,image/png,image/jpeg,image/webp"></label></div>';
-    }).join("")+'</section>':'';
-
-    A.innerHTML='<main class="auth"><div class="auth-card setup-card '+(isR?"wide-setup":"")+'"><p class="eyebrow">'+tr("setup")+'</p><h1>'+tr(role)+'</h1><form id="setupForm">'+commonFields.join("")+'<div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div>'+docHtml+'<button class="primary full">'+(isR?tr("saveProfile"):tr("save"))+' <span>→</span></button></form></div></main>';
+    const docHtml=isR?'<section class="recycler-docs"><h2>'+tr("documents")+'</h2><p class="muted">'+tr("reverification")+'</p>'+docTypes.map(([type,label])=>{const found=docs.find(d=>d.document_type===type);return '<div class="doc-row"><div><strong>'+label+'</strong><small>'+esc(found?.file_name||tr("noDocuments"))+'</small></div><label class="secondary doc-upload">'+tr("upload")+'<input type="file" data-doc-type="'+type+'" accept=".pdf,image/png,image/jpeg,image/webp"></label></div>';}).join("")+'</section>':'';
+    A.innerHTML='<main class="auth"><div class="auth-card setup-card wide-setup"><p class="eyebrow">'+tr("setup")+'</p><h1>'+tr(role)+'</h1><form id="setupForm"><label>'+tr("name")+'<input id="name" value="'+esc(profile?.name||"")+'" required></label>'+
+      (isR?'<label>'+tr("business")+'<input id="business" value="'+esc(profile?.business||"")+'" required></label><label>'+tr("contactEmail")+'<input id="contactEmail" type="email" value="'+esc(profile?.contactEmail||"")+'"></label><label>'+tr("facilityAddress")+'<textarea id="facilityAddress" rows="2">'+esc(profile?.facilityAddress||profile?.area||"")+'</textarea><label>'+tr("registrationNumber")+'<input id="registrationNumber" value="'+esc(profile?.registrationNumber||"")+'"></label><label>'+tr("gstNumber")+'<input id="gstNumber" value="'+esc(profile?.gstNumber||"")+'"></label><label>'+tr("authorizationNumber")+'<input id="authorizationNumber" value="'+esc(profile?.authorizationNumber||"")+'"></label><label>'+tr("authorizationType")+'<input id="authorizationType" value="'+esc(profile?.authorizationType||"")+'" placeholder="CPCB / SPCB authorization"></label><label>'+tr("authorizationExpiry")+'<input id="authorizationExpiry" type="date" value="'+esc(profile?.authorizationExpiry||"")+'"></label><label>'+tr("materials")+'<input id="materials" value="'+esc(profile?.materials||"PCB, Cable, Battery")+'"></label><label>'+tr("pickupAvailable")+'<select id="pickupAvailable"><option value="yes">Yes</option><option value="no">No</option></select></label><label>'+tr("serviceArea")+'<input id="serviceArea" value="'+esc(profile?.serviceArea||"")+'"></label><label>'+tr("offeredRateNotes")+'<textarea id="offeredRateNotes" rows="2">'+esc(profile?.offeredRateNotes||"")+'</textarea>':'')+
+      '<label>'+tr("area")+'<input id="area" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada" required></label><label>'+tr("radius")+'<select id="radius"><option '+(String(profile?.radius||"").startsWith("5")?"selected":"")+'>5 km</option><option '+(String(profile?.radius||"").startsWith("10")?"selected":"")+'>10 km</option><option '+(String(profile?.radius||"").startsWith("20")?"selected":"")+'>20 km</option></select></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div>'+docHtml+'<button class="primary full">'+(isR?tr("saveProfile"):tr("save"))+' <span>→</span></button></form></div></main>';
     if(window.L)initMap("miniMap",true);
     document.getElementById("loc").onclick=getLocation;
     document.getElementById("mapPick").onclick=()=>enableMapPick("miniMap");
@@ -550,27 +430,13 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("setupForm").onsubmit=async e=>{
       e.preventDefault();
       const next={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};
-      if(isR){
-        Object.assign(next,{
-          business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,
-          facilityAddress:document.getElementById("facilityAddress").value,registrationNumber:document.getElementById("registrationNumber").value,
-          gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,
-          authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,
-          materials:document.getElementById("materials").value,pickupAvailable:document.getElementById("pickupAvailable").value!=="no",
-          serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value
-        });
-      }
-      profile=next;save();sessionReady=false;
-      if(isR&&navigator.onLine){
-        try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}
-        catch(err){console.warn(err);toast(err.message||tr("photoError"));}
-      }else if(isR){
-        enqueue({id:"recycler_profile:"+accountId,type:"recycler_profile",data:{...profile,phone:accountId}}).catch(()=>{});
-      }
-      await syncPending();loadRecyclerData({force:true});go("dashboard");
+      if(isR)Object.assign(next,{business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,facilityAddress:document.getElementById("facilityAddress").value,registrationNumber:document.getElementById("registrationNumber").value,gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,materials:document.getElementById("materials").value,pickupAvailable:document.getElementById("pickupAvailable").value!=="no",serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value});
+      profile=next;save();
+      if(isR&&navigator.onLine){try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}catch(err){toast(err.message||"Profile save failed.");}}
+      else if(isR)enqueue({id:"recycler_profile:"+accountId,type:"recycler_profile",data:{...profile,phone:accountId}}).catch(()=>{});
+      await syncPending();go("dashboard");
     };
   }
-
 
   async function uploadRecyclerDocument(type,file){
     if(!file)return;
@@ -579,13 +445,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if(file.size>2*1024*1024)return toast("Document max size is 2 MB.");
       const dataUrl=await readDataUrl(file);
       const res=await fetch("/api/recycler-profile?action=document",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({document_type:type,file_name:file.name,data_url:dataUrl})});
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok)throw new Error(data.error||"Document upload failed.");
-      profile={...profile,documents:data.profile?.recycler_documents||[...(profile.documents||[]),data.document],verificationStatus:"pending",verificationBadge:false};
-      save();toast("✓ "+tr("saved"));render();
-    }catch(err){console.error(err);toast(err.message||"Document upload failed.");}
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(body.error||"Document upload failed.");
+      profile={...profile,documents:body.profile?.recycler_documents||[...(profile?.documents||[]),body.document],verificationStatus:"pending",verificationBadge:false};save();toast("✓ "+tr("saved"));render();
+    }catch(err){toast(err.message||"Document upload failed.");}
   }
-
 
   function dashboard(){
     if(role==="admin") return adminScreen();
@@ -616,165 +480,28 @@ document.addEventListener("DOMContentLoaded", () => {
   function requestCard(r){
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
-  async function loadExternalScript(src){
-    if([...document.scripts].some(x=>x.src===src)||document.querySelector('script[data-runtime="'+src+'"]'))return;
-    await new Promise((resolve,reject)=>{
-      const script=document.createElement("script");script.src=src;script.async=true;script.dataset.runtime=src;
-      script.onload=resolve;script.onerror=()=>reject(new Error("Could not load runtime: "+src));
-      document.head.appendChild(script);
-    });
-  }
-  async function ensureLeafletRuntime(){
-    if(window.L)return true;
-    try{await loadExternalScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");return !!window.L;}catch(err){console.warn("Leaflet unavailable:",err);return false;}
-  }
-  async function ensureTFLiteRuntime(){
-    if(window.tf&&window.tflite)return true;
-    await loadExternalScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
-    await loadExternalScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js");
-    return !!(window.tf&&window.tflite);
-  }
-
-  const OFFLINE_MODEL_URL="/models/ewaste_mobilenetv2_fp16.tflite";
-  const OFFLINE_LABELS_URL="/models/labels.json";
-  const MODEL_CATEGORY_MAP={
-    battery:"battery", cable:"cable", pcb:"pcb",
-    keyboard:"e-waste", microwave:"e-waste", mobile:"e-waste", mouse:"e-waste",
-    player:"e-waste", printer:"e-waste", television:"e-waste", washing_machine:"e-waste"
-  };
-  let offlineClassifier=null;
-  let offlineClassifierPromise=null;
-  let offlineModelConfig=null;
-
-  async function loadOfflineClassifier(){
-    if(offlineClassifier)return offlineClassifier;
-    if(offlineClassifierPromise)return offlineClassifierPromise;
-    offlineClassifierPromise=(async()=>{
-      await ensureTFLiteRuntime();
-      if(!window.tf || !window.tflite) throw new Error("Offline TFLite runtime is not loaded.");
-      if(typeof window.tflite.setWasmPath==="function"){
-        window.tflite.setWasmPath("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/");
-      }
-      await window.tf.ready();
-      const labelResponse=await fetch(OFFLINE_LABELS_URL,{cache:"no-store"});
-      if(!labelResponse.ok)throw new Error("Offline model labels are missing.");
-      offlineModelConfig=await labelResponse.json();
-      if(!Array.isArray(offlineModelConfig.labels)||offlineModelConfig.labels.length!==11){
-        throw new Error("Offline model labels are invalid.");
-      }
-      let modelInput=null;
-      try{
-        const response=await fetch(OFFLINE_MODEL_URL,{cache:"force-cache"});
-        if(response.ok) modelInput=await response.arrayBuffer();
-      }catch{}
-      if(!modelInput) modelInput=await getModel("ewaste-v1");
-      if(!modelInput) throw new Error("Offline model is not installed.");
-      offlineClassifier=await window.tflite.loadTFLiteModel(modelInput,{numThreads:1});
-      return offlineClassifier;
-    })().catch(err=>{
-      offlineClassifierPromise=null;
-      throw err;
-    });
-    return offlineClassifierPromise;
-  }
-
-  async function classifyOfflinePhoto(file){
-    const model=await loadOfflineClassifier();
-    const labels=offlineModelConfig.labels;
-    const size=Number(offlineModelConfig.input_size||224);
-    const normalization=offlineModelConfig.normalization||"minus_one_to_one";
-    const img=await createImageBitmap(file);
-    const canvas=document.createElement("canvas");
-    canvas.width=size;canvas.height=size;
-    const ctx=canvas.getContext("2d",{willReadFrequently:false});
-    ctx.drawImage(img,0,0,size,size);
-    img.close?.();
-    let input=window.tf.browser.fromPixels(canvas).toFloat();
-    if(normalization==="minus_one_to_one") input=window.tf.div(input,127.5).sub(1);
-    else if(normalization==="zero_to_one") input=window.tf.div(input,255);
-    else throw new Error("Unsupported model normalization.");
-    input=input.expandDims(0);
-    let output=model.predict(input);
-    if(Array.isArray(output))output=output[0];
-    if(output && !output.dataSync && typeof output==="object"){
-      const key=Object.keys(output)[0]; output=output[key];
-    }
-    const scores=Array.from(output.dataSync());
-    input.dispose();
-    output.dispose?.();
-    let bestIndex=0;
-    for(let i=1;i<scores.length;i++)if(scores[i]>scores[bestIndex])bestIndex=i;
-    const confidence=Number(scores[bestIndex]||0);
-    const rawLabel=String(labels[bestIndex]||"unknown");
-    const label=rawLabel.replace(/\\s+/g," ").trim().toLowerCase();
-    const category=MODEL_CATEGORY_MAP[label]||"e-waste";
-    return {category,itemType:rawLabel.replace(/_/g," "),condition:"used",notes:"Offline on-device model prediction.",confidence,offline:true};
-  }
-
-  async function installOfflineModel(file){
-    if(!file)return;
-    try{
-      const name=String(file.name||"").toLowerCase();
-      if(!name.endsWith(".tflite"))throw new Error("Please choose a .tflite model file.");
-      if(file.size<500000)throw new Error("The model file looks too small.");
-      const buffer=await file.arrayBuffer();
-      await putModel("ewaste-v1",buffer);
-      offlineClassifier=null;offlineClassifierPromise=null;
-      toast("✓ "+tr("modelInstalled"));
-    }catch(err){
-      console.error(err);
-      toast(err?.message||tr("photoError"));
-    }
-  }
-
   async function analyzeScrapPhoto(file){
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
     if(state)state.textContent=tr("analyzingPhoto");
     if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
     try{
-      let result=null;
-      let offlineError=null;
-      try{
-        result=await classifyOfflinePhoto(file);
-      }catch(err){
-        offlineError=err;
-        console.warn("Offline image model unavailable:",err);
-      }
-      if(!result && navigator.onLine){
-        const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-        const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok)throw new Error(data.detail?String(data.detail):(data.error||"AI analysis failed"));
-        result=data.result||{};
-      }
-      if(!result){
-        throw offlineError||new Error("Offline image model is not ready on this device.");
-      }
+      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
+      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.detail?`${data.error||"AI analysis failed"}: ${data.detail}`:(data.error||"AI analysis failed"));
+      const result=data.result||{};
       if(result.category)document.getElementById("cat").value=result.category;
       if(result.itemType)document.getElementById("itemType").value=result.itemType;
-      if(result.condition){
-        const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");
-        el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;
-      }
+      if(result.condition){const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;}
       if(result.notes)document.getElementById("notes").value=result.notes;
-      document.getElementById("cat").dispatchEvent(new Event("input"));
-      document.getElementById("weight").dispatchEvent(new Event("input"));
-      const pct=Number(result.confidence);
-      const source=result.offline?" · "+(lang==="hi"?"ऑफलाइन AI":lang==="mr"?"ऑफलाइन AI":"Offline AI"):"";
-      if(state)state.textContent=tr("photoReady")+(Number.isFinite(pct)&&pct>0?" · "+Math.round(pct*100)+"%":"")+source;
+      document.getElementById("cat").dispatchEvent(new Event("input"));document.getElementById("weight").dispatchEvent(new Event("input"));
+      if(state)state.textContent=tr("photoReady")+(result.confidence?" · "+Math.round(Number(result.confidence)*100)+"%":"");
       toast("✓ "+tr("photoReady"));
-    }catch(err){
-      console.error(err);
-      if(state)state.textContent=tr("photoError");
-      toast(tr("photoError"));
-    }finally{
-      if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}
-    }
+    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(tr("photoError"));}
+    finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
   }
-
   function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><div class="offline-model-actions"><input id="offlineModelFile" type="file" accept=".tflite,application/octet-stream" hidden><button type="button" class="secondary" id="installOfflineModel">⚡ '+tr("installModel")+'</button><small>'+tr("installModelHint")+'</small></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
     const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
     document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
@@ -786,9 +513,6 @@ document.addEventListener("DOMContentLoaded", () => {
     photoDrop.ondragleave=()=>photoDrop.classList.remove("dragging");
     photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file){const dt=new DataTransfer();dt.items.add(file);photoInput.files=dt.files;setPhoto();}};
     analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);
-    const modelFile=document.getElementById("offlineModelFile");
-    document.getElementById("installOfflineModel").onclick=()=>modelFile.click();
-    modelFile.onchange=()=>installOfflineModel(modelFile.files?.[0]);
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),lotReference:"LOT-"+Date.now().toString(36).toUpperCase(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,collectedAt:new Date().toISOString(),rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
         lotReference:r.lotReference,collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
@@ -874,8 +598,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function profileScreen(){
-    const verification=role==="recycler"?(profile?.verificationBadge?'<span class="verified-badge">★ '+tr("verified")+'</span>':'<span class="unverified-badge">'+tr("notVerified")+'</span>'):"";
-    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">'+tr("profile")+'</p><h1>'+esc(profile?.name||"")+' '+verification+'</h1></div></section><section class="panel profile-panel"><div class="profile-row"><span>'+tr("phone")+'</span><b>+91 '+esc(user?.phone||"")+'</b></div><div class="profile-row"><span>'+tr("role")+'</span><b>'+tr(role)+'</b></div><div class="profile-row"><span>'+tr("area")+'</span><b>'+esc(profile?.area||"")+'</b></div><div class="profile-row"><span>'+tr("language")+'</span><select id="profileLang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select></div><button class="secondary full" id="edit">'+tr("edit")+'</button><button class="danger full" id="out">'+tr("signOut")+'</button></section></main>';
+    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">'+tr("profile")+'</p><h1>'+esc(profile?.name||"")+'</h1></div></section><section class="panel profile-panel"><div class="profile-row"><span>'+tr("phone")+'</span><b>+91 '+esc(user?.phone||"")+'</b></div><div class="profile-row"><span>'+tr("role")+'</span><b>'+tr(role)+'</b></div><div class="profile-row"><span>'+tr("area")+'</span><b>'+esc(profile?.area||"")+'</b></div><div class="profile-row"><span>'+tr("language")+'</span><select id="profileLang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select></div><button class="secondary full" id="edit">'+tr("edit")+'</button><button class="danger full" id="out">'+tr("signOut")+'</button></section></main>';
     bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=async()=>{if(confirm(tr("confirmReset"))){await fetch("/api/session",{method:"DELETE",credentials:"same-origin"}).catch(()=>{});sessionReady=false;localStorage.clear();location.hash="login";render();}};
   }
   function initMap(id,compact=false){
@@ -920,48 +643,18 @@ document.addEventListener("DOMContentLoaded", () => {
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
-  async function startVoice(){
+  function startVoice(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR)return toast(tr("voiceUnsupported"));
     if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
-    recognition=new SR();
-    const locale=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";
-    recognition.lang=locale;
-    recognition.continuous=false;
-    recognition.interimResults=true;
-    recognition.maxAlternatives=3;
+    recognition=new SR();recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
     const state=document.getElementById("listenState"), mic=document.getElementById("mic");
     recognition.onstart=()=>{if(state)state.textContent=tr("listening");if(mic)mic.classList.add("recording");};
     recognition.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";parseVoice(text.trim());};
-    recognition.onerror=e=>{console.warn("Voice:",e?.error);if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
+    recognition.onerror=()=>{if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
     recognition.onend=()=>{if(state)state.textContent="";if(mic)mic.classList.remove("recording");recognition=null;};
-
-    // Prefer the browser's on-device speech recognition when supported.
-    // A language pack may need a one-time download while online.
-    if("processLocally" in recognition && typeof SR.available==="function"){
-      try{
-        const availability=await SR.available({langs:[locale],processLocally:true,quality:"command"});
-        if(availability==="available"){
-          recognition.processLocally=true;
-        }else if((availability==="downloadable"||availability==="downloading")&&typeof SR.install==="function"&&navigator.onLine){
-          const installed=await SR.install({langs:[locale],processLocally:true,quality:"command"});
-          if(installed)recognition.processLocally=true;
-          else if(!navigator.onLine)return toast(tr("voiceUnsupported"));
-          else recognition.processLocally=false;
-        }else if(!navigator.onLine){
-          return toast(tr("voiceUnsupported"));
-        }else{
-          recognition.processLocally=false;
-        }
-      }catch(err){
-        console.warn("On-device voice unavailable:",err);
-        if(!navigator.onLine)return toast(tr("voiceUnsupported"));
-        recognition.processLocally=false;
-      }
-    }
     try{recognition.start();}catch(e){toast(tr("voiceError"));recognition=null;}
   }
-
   function parseVoice(text){
     const raw=normalizeDigits(text), low=raw.toLowerCase();
     const catMap=[
@@ -1046,50 +739,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   async function adminScreen(){
     if(role!=="admin"){dashboard();return;}
-    let data={summary:{},collectors:[],recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[]},error="";
-    try{
-      await ensureSession();
-      const res=await fetch("/api/admin?action=overview",{credentials:"same-origin",cache:"no-store"});
-      const body=await res.json().catch(()=>({}));
-      if(!res.ok)throw new Error(body.error||body.detail||"Admin data unavailable.");
-      data=body;
-    }catch(err){error=err.message||"Admin data unavailable.";}
-
+    let data={summary:{},collectors:[],recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[]};
+    let error="";
+    try{await ensureSession();const res=await fetch("/api/admin?action=overview",{credentials:"same-origin",cache:"no-store"});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||body.detail||"Admin data unavailable.");data=body;}catch(err){error=err.message||"Admin data unavailable.";}
     const s=data.summary||{};
     const stat=(label,value)=>'<section class="panel admin-stat"><span>'+esc(label)+'</span><strong>'+Number(value||0)+'</strong></section>';
-    const statusLabel=x=>String(x.verification_status||"pending").replace(/_/g," ");
-    const recyclerCards=(data.recyclers||[]).map(x=>{
-      const docs=Array.isArray(x.recycler_documents)?x.recycler_documents:[];
-      const verified=!!x.verification_badge||statusLabel(x)==="verified";
-      const docLinks=docs.length?docs.map(d=>'<button class="text-btn admin-doc" data-phone="'+esc(x.phone)+'" data-path="'+esc(d.path)+'">📄 '+esc(d.file_name||d.document_type||"Document")+'</button>').join(" "):'<span class="muted">'+tr("noDocuments")+'</span>';
-      return '<article class="panel verify-card"><div class="verify-head"><div><h2>'+esc(x.business_name||x.name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>+91 '+esc(x.phone)+' · '+esc(x.name||"")+'</p></div><span class="verify-status '+esc(statusLabel(x))+'">'+esc(statusLabel(x))+'</span></div><div class="verify-grid"><span><b>'+tr("facilityAddress")+'</b>'+esc(x.facility_address||x.general_location||"—")+'</span><span><b>'+tr("materials")+'</b>'+esc((x.accepted_materials||[]).join(", ")||"—")+'</span><span><b>'+tr("registrationNumber")+'</b>'+esc(x.registration_number||"—")+'</span><span><b>'+tr("gstNumber")+'</b>'+esc(x.gst_number||"—")+'</span><span><b>'+tr("authorizationNumber")+'</b>'+esc(x.authorization_number||"—")+'</span><span><b>'+tr("authorizationType")+'</b>'+esc(x.authorization_type||"—")+'</span><span><b>'+tr("authorizationExpiry")+'</b>'+esc(x.authorization_expiry||"—")+'</span><span><b>'+tr("contactEmail")+'</b>'+esc(x.contact_email||"—")+'</span><span><b>'+tr("serviceArea")+'</b>'+esc(x.service_area||"—")+'</span><span><b>'+tr("pickupAvailable")+'</b>'+String(x.pickup_available!==false)+'</span></div><div class="doc-list"><strong>'+tr("documents")+':</strong> '+docLinks+'</div><div class="admin-actions">'+(verified?'<button class="secondary admin-action" data-decision="suspend" data-phone="'+esc(x.phone)+'">'+tr("suspend")+'</button>':'<button class="primary admin-action" data-decision="verify" data-phone="'+esc(x.phone)+'">★ '+tr("verify")+'</button><button class="secondary admin-action" data-decision="reject" data-phone="'+esc(x.phone)+'">'+tr("reject")+'</button>')+'</div></article>';
-    }).join("")||'<div class="empty panel">'+tr("noRecyclers")+'</div>';
-
+    const recyclerCards=(data.recyclers||[]).map(x=>{const docs=Array.isArray(x.recycler_documents)?x.recycler_documents:[],verified=!!x.verification_badge||x.verification_status==="verified";const docLinks=docs.length?docs.map(d=>'<button class="text-btn admin-doc" data-phone="'+esc(x.phone)+'" data-path="'+esc(d.path)+'">📄 '+esc(d.file_name||d.document_type||"Document")+'</button>').join(" "):'<span class="muted">'+tr("noDocuments")+'</span>';return '<article class="panel verify-card"><div class="verify-head"><div><h2>'+esc(x.business_name||x.name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>+91 '+esc(x.phone)+' · '+esc(x.name||"")+'</p></div><span class="verify-status '+esc(x.verification_status||"pending")+'">'+esc(x.verification_status||"pending")+'</span></div><div class="verify-grid"><span><b>'+tr("facilityAddress")+'</b>'+esc(x.facility_address||x.general_location||"—")+'</span><span><b>'+tr("materials")+'</b>'+esc((x.accepted_materials||[]).join(", ")||"—")+'</span><span><b>'+tr("registrationNumber")+'</b>'+esc(x.registration_number||"—")+'</span><span><b>'+tr("gstNumber")+'</b>'+esc(x.gst_number||"—")+'</span><span><b>'+tr("authorizationNumber")+'</b>'+esc(x.authorization_number||"—")+'</span><span><b>'+tr("authorizationType")+'</b>'+esc(x.authorization_type||"—")+'</span><span><b>'+tr("authorizationExpiry")+'</b>'+esc(x.authorization_expiry||"—")+'</span><span><b>'+tr("contactEmail")+'</b>'+esc(x.contact_email||"—")+'</span><span><b>'+tr("serviceArea")+'</b>'+esc(x.service_area||"—")+'</span></div><div class="doc-list"><strong>'+tr("documents")+':</strong> '+docLinks+'</div><div class="admin-actions">'+(verified?'<button class="secondary admin-action" data-decision="suspend" data-phone="'+esc(x.phone)+'">'+tr("suspend")+'</button>':'<button class="primary admin-action" data-decision="verify" data-phone="'+esc(x.phone)+'">★ '+tr("verify")+'</button><button class="secondary admin-action" data-decision="reject" data-phone="'+esc(x.phone)+'">'+tr("reject")+'</button>')+'</div></article>';}).join("")||'<div class="empty panel">'+tr("noRecyclers")+'</div>';
     const table=(rows,cols)=>rows.length?'<div class="admin-table-wrap"><table class="admin-table"><thead><tr>'+cols.map(c=>'<th>'+esc(c[0])+'</th>').join("")+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+cols.map(c=>'<td>'+esc(String(typeof c[1]==="function"?c[1](row):row[c[1]]??"—"))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>':'<div class="empty">'+tr("noRequests")+'</div>';
-
-    A.innerHTML=topbar()+'<main class="page admin-page"><section class="section-title"><div><p class="eyebrow">🛡 '+tr("adminPanel")+'</p><h1>'+tr("summary")+'</h1><p>Admin can review recycler documents, verify accounts, and inspect platform activity.</p></div><button class="secondary" id="adminRefresh">↻ '+tr("refresh")+'</button></section>'+
-      (error?'<div class="panel error-panel">'+esc(error)+'</div>':'')+
-      '<div class="admin-stats">'+stat(tr("collectors"),s.collectors)+stat(tr("recyclers"),s.recyclers)+stat(tr("pendingVerification"),s.pending_recycler_verification)+stat(tr("verifiedRecyclers"),s.verified_recyclers)+stat(tr("lots"),s.lots)+stat(tr("offers"),s.offers)+stat(tr("transactions"),s.transactions)+stat(tr("earnings"),s.earnings)+'</div>'+
-      '<section><div class="section-title admin-section-title"><div><h1>★ '+tr("verifyRecyclers")+'</h1><p>Review submitted registration, authorization and facility documents.</p></div></div><div class="verify-list">'+recyclerCards+'</div></section>'+
-      '<section class="admin-data"><div class="section-title admin-section-title"><div><h1>'+tr("allData")+'</h1><p>Collectors, requests, offers, transactions, handovers and earnings.</p></div></div>'+
-      '<details open><summary>'+tr("collectors")+' ('+(data.collectors||[]).length+')</summary>'+table(data.collectors||[],[["Phone","phone"],["Name","name"],["Language","preferred_language"],["Location","general_location"],["Active",r=>r.active]])+'</details>'+
-      '<details><summary>'+tr("lots")+' ('+(data.lots||[]).length+')</summary>'+table(data.lots||[],[["Lot","lot_reference"],["Collector","collector_phone"],["Material","material_category"],["Weight","approximate_weight_kg"],["Quoted","quoted_value"],["Final","final_sale_value"],["Status","status"],["Collected","collected_at"]])+'</details>'+
-      '<details><summary>'+tr("offers")+' ('+(data.offers||[]).length+')</summary>'+table(data.offers||[],[["Lot","lot_reference"],["Role","actor_role"],["Actor","actor_ref"],["Price","price"],["Time","created_at"]])+'</details>'+
-      '<details><summary>'+tr("transactions")+' ('+(data.transactions||[]).length+')</summary>'+table(data.transactions||[],[["Transaction","transaction_reference"],["Lot","lot_reference"],["Collector","collector_phone"],["Recycler","recycler_external_id"],["Quoted","quoted_price"],["Final","final_price"],["Payment","payment_status"],["Status","status"]])+'</details>'+
-      '<details><summary>'+tr("handovers")+' ('+(data.handovers||[]).length+')</summary>'+table(data.handovers||[],[["Transaction","transaction_reference"],["Handover","handover_reference"],["Weight","actual_weight_kg"],["Collector confirmed","collector_confirmed"],["Recycler confirmed","recycler_confirmed"],["Time","handover_at"]])+'</details>'+
-      '<details><summary>'+tr("earnings")+' ('+(data.earnings||[]).length+')</summary>'+table(data.earnings||[],[["Transaction","transaction_reference"],["Collector","collector_phone"],["Amount","amount"],["Status","status"],["Method","payment_method"],["Paid","paid_at"]])+'</details>'+
-      '</section></main>';
+    A.innerHTML=topbar()+'<main class="page admin-page"><section class="section-title"><div><p class="eyebrow">🛡 '+tr("adminPanel")+'</p><h1>'+tr("summary")+'</h1><p>Review recycler verification and monitor platform activity.</p></div><button class="secondary" id="adminRefresh">↻ '+tr("refresh")+'</button></section>'+(error?'<div class="panel error-panel">'+esc(error)+'</div>':'')+'<div class="admin-stats">'+stat(tr("collectors"),s.collectors)+stat(tr("recyclers"),s.recyclers)+stat(tr("pendingVerification"),s.pending_recycler_verification)+stat(tr("verifiedRecyclers"),s.verified_recyclers)+stat(tr("lots"),s.lots)+stat(tr("offers"),s.offers)+stat(tr("transactions"),s.transactions)+stat(tr("earnings"),s.earnings)+'</div><section><div class="section-title admin-section-title"><div><h1>★ '+tr("verifyRecyclers")+'</h1><p>Review submitted recycler details and documents.</p></div></div><div class="verify-list">'+recyclerCards+'</div></section><section class="admin-data"><div class="section-title admin-section-title"><div><h1>'+tr("allData")+'</h1><p>Collectors, requests, offers, transactions, handovers and earnings.</p></div></div><details open><summary>'+tr("collectors")+' ('+(data.collectors||[]).length+')</summary>'+table(data.collectors||[],[["Phone","phone"],["Name","name"],["Language","preferred_language"],["Location","general_location"],["Active",r=>r.active]])+'</details><details><summary>'+tr("lots")+' ('+(data.lots||[]).length+')</summary>'+table(data.lots||[],[["Lot","lot_reference"],["Collector","collector_phone"],["Material","material_category"],["Weight","approximate_weight_kg"],["Quoted","quoted_value"],["Final","final_sale_value"],["Status","status"],["Collected","collected_at"]])+'</details><details><summary>'+tr("offers")+' ('+(data.offers||[]).length+')</summary>'+table(data.offers||[],[["Lot","lot_reference"],["Role","actor_role"],["Actor","actor_ref"],["Price","price"],["Time","created_at"]])+'</details><details><summary>'+tr("transactions")+' ('+(data.transactions||[]).length+')</summary>'+table(data.transactions||[],[["Transaction","transaction_reference"],["Lot","lot_reference"],["Collector","collector_phone"],["Recycler","recycler_external_id"],["Quoted","quoted_price"],["Final","final_price"],["Payment","payment_status"],["Status","status"]])+'</details><details><summary>'+tr("handovers")+' ('+(data.handovers||[]).length+')</summary>'+table(data.handovers||[],[["Transaction","transaction_reference"],["Handover","handover_reference"],["Weight","actual_weight_kg"],["Collector confirmed","collector_confirmed"],["Recycler confirmed","recycler_confirmed"],["Time","handover_at"]])+'</details><details><summary>'+tr("earnings")+' ('+(data.earnings||[]).length+')</summary>'+table(data.earnings||[],[["Transaction","transaction_reference"],["Collector","collector_phone"],["Amount","amount"],["Status","status"],["Method","payment_method"],["Paid","paid_at"]])+'</details></section></main>';
     bindShell();
     document.getElementById("adminRefresh").onclick=()=>render();
-    A.querySelectorAll(".admin-action").forEach(b=>b.onclick=async()=>{
-      const decision=b.dataset.decision,phone=b.dataset.phone;
-      const note=prompt("Verification note (optional):","")||"";
-      if(!confirm(decision.toUpperCase()+" this recycler?"))return;
-      try{const res=await fetch("/api/admin?action=verify-recycler",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone,decision,note})});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"Verification failed.");toast("✓ "+tr(decision==="verify"?"verified":decision==="reject"?"reject":"saved"));render();}catch(err){toast(err.message||"Verification failed.");}
-    });
-    A.querySelectorAll(".admin-doc").forEach(b=>b.onclick=async()=>{
-      try{const res=await fetch("/api/admin?action=document-url",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,path:b.dataset.path})});const body=await res.json();if(!res.ok)throw new Error(body.error||"Could not open document.");window.open(body.url,"_blank","noopener");}catch(err){toast(err.message||"Could not open document.");}
-    });
+    A.querySelectorAll(".admin-action").forEach(b=>b.onclick=async()=>{const note=prompt("Verification note (optional):","")||"";if(!confirm(b.dataset.decision.toUpperCase()+" this recycler?"))return;try{const res=await fetch("/api/admin?action=verify-recycler",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,decision:b.dataset.decision,note})});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"Verification failed.");render();}catch(err){toast(err.message||"Verification failed.");}});
+    A.querySelectorAll(".admin-doc").forEach(b=>b.onclick=async()=>{try{const res=await fetch("/api/admin?action=document-url",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,path:b.dataset.path})});const body=await res.json();if(!res.ok)throw new Error(body.error||"Could not open document.");window.open(body.url,"_blank","noopener");}catch(err){toast(err.message||"Could not open document.");}});
   }
 
   function render(){
@@ -1107,7 +768,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if(h==="safety")return safetyScreen();
     if(h==="profile")return profileScreen();
     if(h==="admin"&&role==="admin")return adminScreen();
-    if(h==="earnings"&&role==="collector")return earningsScreen();
     dashboard();
   }
   window.addEventListener("hashchange",render);
@@ -1121,5 +781,4 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSharedRequests();
   startSharedPolling();
   render();
-  ensureLeafletRuntime().then(ok=>{if(ok&&document.querySelector(".map"))render();}).catch(()=>{});
 });
