@@ -8,7 +8,7 @@ export default async function handler(req,res){
   const call=async(path,opt={})=>{const r=await fetch(url+path,{...opt,headers:{...h,...(opt.headers||{})}});const t=await r.text();let j={};try{j=t?JSON.parse(t):{}}catch{}if(!r.ok)throw new Error(j?.message||j?.error||t);return j;};
   try{
     const {operations=[]}=req.body||{};if(!Array.isArray(operations)||operations.length>100)return res.status(400).json({error:"Invalid sync batch."});
-    const order={profile:1,lot:2,photo:3,transaction:4,handover:5,payment:6};operations.sort((a,b)=>(order[a.type]||99)-(order[b.type]||99));
+    const order={profile:1,lot:2,photo:3,offer:4,transaction:5,handover:6,payment:7};operations.sort((a,b)=>(order[a.type]||99)-(order[b.type]||99));
     const results=[];
     for(const op of operations){
       const p=op.data||{};
@@ -18,6 +18,15 @@ export default async function handler(req,res){
       }else if(op.type==="lot"){
         const ref=String(p.lotReference||"");if(!ref)throw new Error("lotReference required.");
         await call("/rest/v1/platform_lots?on_conflict=lot_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({lot_reference:ref,collector_phone:session.phone,material_category:p.category||"unknown",sub_category:p.itemType||null,condition:p.condition||null,approximate_weight_kg:Number(p.weightKg||0),source_type:p.sourceType||"field",collection_address:p.address||null,collection_latitude:p.lat??null,collection_longitude:p.lng??null,estimated_value:p.indicativeTotal??null,quoted_value:p.expectedPrice??null,status:p.status||"pending",notes:p.notes||null,collected_at:p.collectedAt||new Date().toISOString(),image_url:p.imageUrl||null,source_photo_count:p.imageUrl?1:0})});
+      }else if(op.type==="offer"){
+        const p=op.data||{};
+        const lotReference=String(p.lotReference||""); const price=Number(p.price||0);
+        if(!lotReference||!Number.isFinite(price)||price<=0)throw new Error("Invalid offer.");
+        const lots=await call("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference)+"&select=collector_phone,status");
+        if(!lots?.[0])throw new Error("Lot not found.");
+        if(session.role==="collector"&&lots[0].collector_phone!==session.phone)throw new Error("Lot ownership check failed.");
+        await call("/rest/v1/platform_offers",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify({lot_reference:lotReference,actor_role:session.role,actor_ref:session.role==="recycler"?"ACCOUNT:"+session.phone:session.phone,price})});
+        await call("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({quoted_value:price})});
       }else if(op.type==="transaction"){
         await call("/rest/v1/platform_transactions?on_conflict=transaction_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({...p,collector_phone:session.phone})});
       }else if(op.type==="handover"){
