@@ -357,7 +357,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function roleScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div></div></main>';
-    A.querySelectorAll("[data-role]").forEach(b=>b.onclick=()=>{role=b.dataset.role;save();go("setup");});
+    A.querySelectorAll("[data-role]").forEach(b=>b.onclick=async()=>{role=b.dataset.role;save();try{if(user?.verified)await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role})});}catch{}go("setup");});
   }
   function setupScreen(){
     const isR=role==="recycler";
