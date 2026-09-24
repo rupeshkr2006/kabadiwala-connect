@@ -188,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
+      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
@@ -376,6 +376,20 @@ document.addEventListener("DOMContentLoaded", () => {
     },50);
   }
   function updateStatus(id,status){const r=requests.find(x=>String(x.id)===String(id));if(r){r.status=status;save();render();}}
+  function safetyScreen(){
+    const copy={
+      en:[["🔥","Do not burn wires or plastic","Burning can release harmful smoke and toxic substances."],["📺","Handle CRTs carefully","Do not break, drill or open CRT glass."],["🔋","Do not open batteries","Do not cut, crush, puncture or heat batteries."],["🟩","Do not burn PCBs","Avoid burning or chemically stripping electronic boards."],["🧤","Use basic protection","Use gloves and avoid sharp, leaking or broken components."]],
+      hi:[["🔥","तार या प्लास्टिक न जलाएं","जलाने से हानिकारक धुआं और जहरीले पदार्थ निकल सकते हैं।"],["📺","CRT को सावधानी से संभालें","CRT का कांच न तोड़ें, न ड्रिल करें और न खोलें।"],["🔋","बैटरी न खोलें","बैटरी को काटें, कुचलें, छेदें या गर्म न करें।"],["🟩","PCB न जलाएं","इलेक्ट्रॉनिक बोर्ड को खुद न जलाएं और न रसायन से अलग करें।"],["🧤","सुरक्षा उपकरण पहनें","दस्ताने पहनें और नुकीले, टूटे या लीक हो रहे हिस्सों से सावधान रहें।"]],
+      mr:[["🔥","तारा किंवा प्लास्टिक जाळू नका","जाळल्याने हानिकारक धूर आणि विषारी पदार्थ बाहेर पडू शकतात."],["📺","CRT काळजीपूर्वक हाताळा","CRT काच तोडू, ड्रिल किंवा उघडू नका."],["🔋","बॅटरी उघडू नका","बॅटरी कापू, चिरडू, छिद्रू किंवा गरम करू नका."],["🟩","PCB जाळू नका","इलेक्ट्रॉनिक बोर्ड स्वतः जाळू नका किंवा रसायनांनी वेगळे करू नका."],["🧤","मूलभूत संरक्षण वापरा","हातमोजे वापरा आणि धारदार, तुटलेले किंवा गळणारे भाग टाळा."]]
+    }[lang]||[];
+    const title=lang==="hi"?"सुरक्षित स्क्रैप हैंडलिंग":lang==="mr"?"सुरक्षित भंगार हाताळणी":"Safe scrap handling";
+    const sub=lang==="hi"?"चित्र और आवाज के साथ आसान सुरक्षा निर्देश।":lang==="mr"?"चित्र आणि आवाजासह सोप्या सुरक्षा सूचना.":"Simple pictorial safety guidance with optional voice.";
+    const listen=lang==="hi"?"सुनें":lang==="mr"?"ऐका":"Listen";
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</p><h1>'+title+'</h1><p>'+sub+'</p></div></section><div class="safety-grid">'+copy.map(x=>'<article class="panel safety-card"><div class="safety-icon">'+x[0]+'</div><h2>'+x[1]+'</h2><p>'+x[2]+'</p><button class="secondary safety-speak" data-speak="'+esc(x[1]+". "+x[2])+'">🔊 '+listen+'</button></article>').join("")+'</div></main>';
+    bindShell();
+    A.querySelectorAll(".safety-speak").forEach(b=>b.onclick=()=>{if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(b.dataset.speak);u.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";speechSynthesis.speak(u);}});
+  }
+
   function profileScreen(){
     A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">'+tr("profile")+'</p><h1>'+esc(profile?.name||"")+'</h1></div></section><section class="panel profile-panel"><div class="profile-row"><span>'+tr("phone")+'</span><b>+91 '+esc(user?.phone||"")+'</b></div><div class="profile-row"><span>'+tr("role")+'</span><b>'+tr(role)+'</b></div><div class="profile-row"><span>'+tr("area")+'</span><b>'+esc(profile?.area||"")+'</b></div><div class="profile-row"><span>'+tr("language")+'</span><select id="profileLang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select></div><button class="secondary full" id="edit">'+tr("edit")+'</button><button class="danger full" id="out">'+tr("signOut")+'</button></section></main>';
     bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=()=>{if(confirm(tr("confirmReset"))){localStorage.clear();location.hash="login";render();}};
@@ -526,6 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(h==="setup")return setupScreen();
     if(h==="list")return listScreen();
     if(h==="requests")return requestsScreen();
+    if(h==="safety")return safetyScreen();
     if(h==="profile")return profileScreen();
     dashboard();
   }
