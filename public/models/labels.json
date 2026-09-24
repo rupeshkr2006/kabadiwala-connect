@@ -1,0 +1,18 @@
+{
+  "labels": [
+    "battery",
+    "cable",
+    "keyboard",
+    "microwave",
+    "mobile",
+    "mouse",
+    "pcb",
+    "player",
+    "printer",
+    "television",
+    "washing_machine"
+  ],
+  "input_size": 224,
+  "normalization": "minus_one_to_one",
+  "source": "Team-provided trained model; label order confirmed from team screenshot on 2026-09-24"
+}
