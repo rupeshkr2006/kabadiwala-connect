@@ -1,4 +1,4 @@
-const CACHE_NAME = "kabadiwala-connect-v7-admin";
+const CACHE_NAME = "kabadiwala-connect-v9-admin-final";
 const APP_SHELL = [
   "/", "/index.html", "/main.mjs", "/styles.css", "/favicon.svg", "/offline-db.mjs",
   "/manifest.webmanifest", "/models/labels.json", "/models/ewaste_mobilenetv2_fp16.tflite",
