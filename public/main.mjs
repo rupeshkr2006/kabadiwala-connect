@@ -1,4 +1,4 @@
-import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+import { putState, getState, putModel, getModel, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
 
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"Indicative market rate", minimumPrice:"Minimum expected price", estimated:"Estimated value", itemType:"Item / type", askingPrice:"Your asking price", expectedPrice:"Expected price", currentOffer:"Current offer",
       counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
       counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
-      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the details below.", uploadPhoto:"Upload scrap photo", uploadHint:"Click to choose a photo or take one with your camera.", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
+      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the details below.", uploadPhoto:"Upload scrap photo", uploadHint:"Click to choose a photo or take one with your camera.", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting.", installModel:"Install offline AI model", installModelHint:"One-time: choose the trained .tflite file. It stays on this device for offline use.", modelInstalled:"Offline AI model installed", modelMissing:"Offline model is not installed on this device."
 
     },
     hi: {
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अनुमानित बाजार दर", minimumPrice:"न्यूनतम अनुमानित कीमत", estimated:"अनुमानित मूल्य", itemType:"वस्तु / प्रकार", askingPrice:"आपकी कीमत", expectedPrice:"आपकी अपेक्षित कीमत", currentOffer:"वर्तमान ऑफर",
       counter:"नई कीमत", acceptPrice:"कीमत स्वीकार करें", agreed:"तय कीमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रीसायकलर ऑफर",
       counterHint:"नई कीमत डालें", priceNote:"यह केवल अनुमान है — अंतिम कीमत बातचीत से तय होगी।", priceRequired:"सही कीमत डालें।",
-      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे की जानकारी भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"फोटो चुनने या कैमरा इस्तेमाल करने के लिए दबाएं।", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें."
+      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे की जानकारी भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"फोटो चुनने या कैमरा इस्तेमाल करने के लिए दबाएं।", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें.", installModel:"ऑफलाइन AI मॉडल इंस्टॉल करें", installModelHint:"एक बार प्रशिक्षित .tflite फ़ाइल चुनें। यह इस डिवाइस पर ऑफलाइन उपयोग के लिए रहेगी।", modelInstalled:"ऑफलाइन AI मॉडल इंस्टॉल हो गया", modelMissing:"इस डिवाइस पर ऑफलाइन मॉडल इंस्टॉल नहीं है।"
 
     },
     mr: {
@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अंदाजे बाजार दर", minimumPrice:"किमान अंदाजे किंमत", estimated:"अंदाजे किंमत", itemType:"वस्तू / प्रकार", askingPrice:"तुमची किंमत", expectedPrice:"तुमची अपेक्षित किंमत", currentOffer:"सध्याची ऑफर",
       counter:"नवी किंमत", acceptPrice:"किंमत स्वीकारा", agreed:"ठरलेली किंमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रिसायकलर ऑफर",
       counterHint:"नवी किंमत टाका", priceNote:"ही फक्त अंदाजे किंमत आहे — अंतिम किंमत चर्चेने ठरेल.", priceRequired:"योग्य किंमत टाका.",
-      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील माहिती भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"फोटो निवडण्यासाठी किंवा कॅमेरा वापरण्यासाठी दाबा.", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा."
+      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील माहिती भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"फोटो निवडण्यासाठी किंवा कॅमेरा वापरण्यासाठी दाबा.", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा.", installModel:"ऑफलाइन AI मॉडेल इंस्टॉल करा", installModelHint:"एकदा प्रशिक्षित .tflite फाइल निवडा. ती या डिव्हाइसवर ऑफलाइन वापरासाठी राहील.", modelInstalled:"ऑफलाइन AI मॉडेल इंस्टॉल झाले", modelMissing:"या डिव्हाइसवर ऑफलाइन मॉडेल इंस्टॉल केलेले नाही."
 
     }
   };
@@ -479,7 +479,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if(!Array.isArray(offlineModelConfig.labels)||offlineModelConfig.labels.length!==11){
         throw new Error("Offline model labels are invalid.");
       }
-      offlineClassifier=await window.tflite.loadTFLiteModel(OFFLINE_MODEL_URL,{numThreads:1});
+      let modelInput=null;
+      try{
+        const response=await fetch(OFFLINE_MODEL_URL,{cache:"force-cache"});
+        if(response.ok) modelInput=await response.arrayBuffer();
+      }catch{}
+      if(!modelInput) modelInput=await getModel("ewaste-v1");
+      if(!modelInput) throw new Error("Offline model is not installed.");
+      offlineClassifier=await window.tflite.loadTFLiteModel(modelInput,{numThreads:1});
       return offlineClassifier;
     })().catch(err=>{
       offlineClassifierPromise=null;
@@ -519,6 +526,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const label=rawLabel.replace(/\\s+/g," ").trim().toLowerCase();
     const category=MODEL_CATEGORY_MAP[label]||"e-waste";
     return {category,itemType:rawLabel.replace(/_/g," "),condition:"used",notes:"Offline on-device model prediction.",confidence,offline:true};
+  }
+
+  async function installOfflineModel(file){
+    if(!file)return;
+    try{
+      const name=String(file.name||"").toLowerCase();
+      if(!name.endsWith(".tflite"))throw new Error("Please choose a .tflite model file.");
+      if(file.size<500000)throw new Error("The model file looks too small.");
+      const buffer=await file.arrayBuffer();
+      await putModel("ewaste-v1",buffer);
+      offlineClassifier=null;offlineClassifierPromise=null;
+      toast("✓ "+tr("modelInstalled"));
+    }catch(err){
+      console.error(err);
+      toast(err?.message||tr("photoError"));
+    }
   }
 
   async function analyzeScrapPhoto(file){
@@ -568,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><div class="offline-model-actions"><input id="offlineModelFile" type="file" accept=".tflite,application/octet-stream" hidden><button type="button" class="secondary" id="installOfflineModel">⚡ '+tr("installModel")+'</button><small>'+tr("installModelHint")+'</small></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
     const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
     document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
@@ -579,7 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
     photoDrop.ondragover=e=>{e.preventDefault();photoDrop.classList.add("dragging");};
     photoDrop.ondragleave=()=>photoDrop.classList.remove("dragging");
     photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file){const dt=new DataTransfer();dt.items.add(file);photoInput.files=dt.files;setPhoto();}};
-    analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);
+    analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);\n    const modelFile=document.getElementById("offlineModelFile");\n    document.getElementById("installOfflineModel").onclick=()=>modelFile.click();\n    modelFile.onchange=()=>installOfflineModel(modelFile.files?.[0]);
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),lotReference:"LOT-"+Date.now().toString(36).toUpperCase(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,collectedAt:new Date().toISOString(),rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
         lotReference:r.lotReference,collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
