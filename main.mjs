@@ -1,3 +1,5 @@
+import { putState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
   const demo = { lat: 16.5062, lng: 80.6480 };
@@ -141,8 +143,36 @@ document.addEventListener("DOMContentLoaded", () => {
     if(accountId) {
       accounts[accountId]={phone:accountId,role,profile,pos,verified:!!user?.verified};
       localStorage.kcAccounts=JSON.stringify(accounts);
+      putState("app",{lang,role,pos,requests,user,profile,accountId}).catch(()=>{});
+      enqueue({id:"profile:"+accountId,type:"profile",data:{
+        phone:accountId,role,name:profile?.name||"New User",
+        preferred_language:lang,general_location:profile?.area||null
+      }}).catch(()=>{});
     }
   };
+  async function syncPending(){
+    if(!navigator.onLine)return;
+    const items=await getOutbox().catch(()=>[]);
+    if(!items.length)return;
+    try{
+      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:items})});
+      if(!response.ok)return;
+      const data=await response.json().catch(()=>({}));
+      for(const item of items){
+        if((data.results||[]).some(x=>x.id===item.id)) await removeOutbox(item.id).catch(()=>{});
+      }
+      updateNetworkStatus();
+    }catch{}
+  }
+  function updateNetworkStatus(){
+    const el=document.getElementById("netStatus");
+    if(!el)return;
+    el.textContent=navigator.onLine?"● Online":"● Offline";
+    el.className=navigator.onLine?"net-status online":"net-status offline";
+    el.title=navigator.onLine?"Connected — pending changes will sync.":"Offline — changes are saved on this device.";
+  }
+  window.addEventListener("online",()=>{updateNetworkStatus();syncPending();});
+  window.addEventListener("offline",updateNetworkStatus);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   function toast(text){ const d=document.createElement("div"); d.className="toast"; d.textContent=text; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
   function go(p){ location.hash=p; render(); }
@@ -158,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
+      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
@@ -285,7 +315,10 @@ document.addEventListener("DOMContentLoaded", () => {
     photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file){const dt=new DataTransfer();dt.items.add(file);photoInput.files=dt.files;setPhoto();}};
     analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
-    document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();toast(tr("pickupCreated"));go("requests");};
+    document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
+        collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
+        address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice
+      }}).catch(()=>{});toast(tr("pickupCreated"));syncPending();go("requests");};
   }
   function requestsScreen(){
     seedData(); normalizePricing();
@@ -498,5 +531,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("hashchange",render);
   if(!location.hash)location.hash=user?.verified?(role?"dashboard":"role"):"login";
+  updateNetworkStatus();
+  syncPending();
   render();
 });
