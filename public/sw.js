@@ -1,7 +1,7 @@
 const CACHE_NAME = "kabadiwala-connect-v9-admin-final";
 const APP_SHELL = [
   "/", "/index.html", "/main.mjs", "/styles.css", "/favicon.svg", "/offline-db.mjs",
-  "/manifest.webmanifest", "/models/labels.json", "/models/ewaste_mobilenetv2_fp16.tflite",
+  "/manifest.webmanifest", "/admin.html", "/models/labels.json", "/models/ewaste_mobilenetv2_fp16.tflite",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js"
 ];
