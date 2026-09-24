@@ -46,11 +46,11 @@ export default async function handler(req,res){
       const p=req.body||{},lat=Number(p.lat),lng=Number(p.lng),material=String(p.category||"e-waste");
       const rows=await rest("/rest/v1/recycler_directory?active=eq.true&select=*");
       const ranked=rows.map(x=>{
-        const distance=(Number.isFinite(lat)&&Number.isFinite(lng)&&x.city)?haversine(lat,lng,estimateLat(x),estimateLng(x)):999;
+        const hasCoords=Number.isFinite(lat)&&Number.isFinite(lng)&&Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude)); const distance=hasCoords?haversine(lat,lng,Number(x.latitude),Number(x.longitude)):null;
         const mm=materialMatch(material,x.materials_accepted), auth=authorizedName(x.authorization_status), pickup=!!x.pickup_available;
-        const locationScore=distance===999?5:Math.max(0,25-Math.min(distance,25));
+        const locationScore=distance==null?5:Math.max(0,25-Math.min(distance,25));
         const score=(mm?40:0)+locationScore+(pickup?20:0)+(auth?15:0);
-        return {...x,distance_km:Number(distance.toFixed(2)),match_score:score,material_match:mm,rate_information:x.offered_rate_tier||"No verified numeric recycler rate"};
+        return {...x,distance_km:distance==null?null:Number(distance.toFixed(2)),location_available:distance!=null,match_score:score,material_match:mm,rate_information:x.offered_rate_tier||"No verified numeric recycler rate"};
       }).filter(x=>x.material_match).sort((a,b)=>b.match_score-a.match_score);
       return res.status(200).json({rows:ranked.slice(0,10),scoring:{material:40,location:25,pickup:20,authorization:15},note:"Numeric recycler rates are not used until verified recycler quotes are recorded."});
     }
@@ -93,7 +93,7 @@ export default async function handler(req,res){
       if(hs[0]) saved=(await rest("/rest/v1/platform_handovers?transaction_reference=eq."+encodeURIComponent(txRef),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(current)}))[0];
       else saved=(await rest("/rest/v1/platform_handovers",{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify(current)}))[0];
       const both=!!saved.collector_confirmed&&!!saved.recycler_confirmed;
-      await rest("/rest/v1/platform_transactions?transaction_reference=eq."+encodeURIComponent(txRef),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:both?"handed_over":"accepted",handover_address:saved.handover_address,hand-over_latitude:saved.handover_latitude,hand-over_longitude:saved.handover_longitude,handed_over_at:both?saved.handover_at:null})}).catch(()=>{});
+      await rest("/rest/v1/platform_transactions?transaction_reference=eq."+encodeURIComponent(txRef),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:both?"handed_over":"accepted",handover_address:saved.handover_address,handover_latitude:saved.handover_latitude,handover_longitude:saved.handover_longitude,handed_over_at:both?saved.handover_at:null})}).catch(()=>{});
       if(both)await rest("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(tx.lot_reference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:"handed_over",handed_over_at:saved.handover_at})});
       return res.status(200).json({handover:saved,both_confirmed:both});
     }
@@ -113,5 +113,3 @@ export default async function handler(req,res){
     return res.status(400).json({error:"Unknown workflow action."});
   }catch(e){console.error(e);return res.status(502).json({error:"Workflow request failed.",detail:e.message});}
 }
-function estimateLat(x){return Number(x.latitude)||16.5}
-function estimateLng(x){return Number(x.longitude)||80.65}
