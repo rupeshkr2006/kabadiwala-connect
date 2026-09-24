@@ -374,6 +374,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const s=A.querySelector(".lang"); if(s){s.value=lang;s.onchange=e=>{lang=e.target.value;save();toast(tr("languageSaved"));render();};}
     A.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>go(b.dataset.p));
   }
+  function adminDirectEntry(){
+    location.href="/admin.html";
+  }
+
   function auth(){
     if(!location.hash || location.hash==="#login") return phoneScreen();
     if(location.hash==="#otp") return otpScreen();
