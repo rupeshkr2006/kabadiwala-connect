@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let marketLoaded = false;
   let sharedRefreshing = false;
   let sharedPoll = null;
+  let sessionReady = false;
   const FALLBACK_MARKET = [
     {material_name:"Batteries",buying_price:105,unit:"kg",market_min:94.5,market_max:115.5,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
     {material_name:"Cables",buying_price:440,unit:"kg",market_min:396,market_max:484,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
@@ -235,13 +236,24 @@ document.addEventListener("DOMContentLoaded", () => {
   T.hi.matchRecycler="रीसायकलर खोजें"; T.hi.recommended="सुझाए गए रीसायकलर"; T.hi.select="चुनें"; T.hi.confirmHandover="हैंडओवर की पुष्टि करें"; T.hi.payment="भुगतान दर्ज करें"; T.hi.earnings="कमाई"; T.hi.totalEarned="कुल कमाई"; T.hi.paid="भुगतान हुआ"; T.hi.pendingAmount="पेंडिंग"; T.hi.noEarnings="अभी कोई कमाई नहीं।"; T.hi.workflowNote="हैंडओवर के लिए दोनों पक्षों की पुष्टि जरूरी है।"; T.hi.paidSuccess="भुगतान दर्ज हुआ";
   T.mr.matchRecycler="रिसायकलर शोधा"; T.mr.recommended="सुचवलेले रिसायकलर"; T.mr.select="निवडा"; T.mr.confirmHandover="हँडओव्हरची पुष्टी करा"; T.mr.payment="पेमेंट नोंदवा"; T.mr.earnings="कमाई"; T.mr.totalEarned="एकूण कमाई"; T.mr.paid="पेड"; T.mr.pendingAmount="प्रलंबित"; T.mr.noEarnings="अजून कमाई नाही."; T.mr.workflowNote="हँडओव्हरसाठी दोन्ही बाजूंची पुष्टी आवश्यक आहे."; T.mr.paidSuccess="पेमेंट नोंदले";
 
+  async function ensureSession(){
+    if(sessionReady)return true;
+    if(!user?.verified||!accountId||!role)throw new Error("Session is not ready.");
+    const response=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"Session authentication failed.");
+    sessionReady=true;return true;
+  }
+
   async function apiPost(action,body){
+    await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),credentials:"same-origin"});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
     return data;
   }
   async function apiGet(action){
+    await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{credentials:"same-origin",cache:"no-store"});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
@@ -311,6 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   async function syncPending(){
     if(!navigator.onLine)return;
+    try{await ensureSession();}catch{return;}
     const items=await getOutbox().catch(()=>[]);
     if(!items.length)return;
     try{
@@ -398,7 +411,9 @@ document.addEventListener("DOMContentLoaded", () => {
       role=existing?.role||"";
       profile=existing?.profile||null;
       pos=existing?.pos||null;
+      sessionReady=false;
       save();
+      if(role){try{await ensureSession();}catch(err){console.warn("Session:",err);}}
       go(role?"dashboard":"role");
     };
   }
@@ -565,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function profileScreen(){
     A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">'+tr("profile")+'</p><h1>'+esc(profile?.name||"")+'</h1></div></section><section class="panel profile-panel"><div class="profile-row"><span>'+tr("phone")+'</span><b>+91 '+esc(user?.phone||"")+'</b></div><div class="profile-row"><span>'+tr("role")+'</span><b>'+tr(role)+'</b></div><div class="profile-row"><span>'+tr("area")+'</span><b>'+esc(profile?.area||"")+'</b></div><div class="profile-row"><span>'+tr("language")+'</span><select id="profileLang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select></div><button class="secondary full" id="edit">'+tr("edit")+'</button><button class="danger full" id="out">'+tr("signOut")+'</button></section></main>';
-    bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=async()=>{if(confirm(tr("confirmReset"))){await fetch("/api/session",{method:"DELETE",credentials:"same-origin"}).catch(()=>{});localStorage.clear();location.hash="login";render();}};
+    bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=async()=>{if(confirm(tr("confirmReset"))){await fetch("/api/session",{method:"DELETE",credentials:"same-origin"}).catch(()=>{});sessionReady=false;localStorage.clear();location.hash="login";render();}};
   }
   function initMap(id,compact=false){
     const el=document.getElementById(id);if(!el||!window.L)return;
