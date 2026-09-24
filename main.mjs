@@ -779,7 +779,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   window.addEventListener("hashchange",render);
   cleanDemoRequests();
-  if(!location.hash)location.hash=user?.verified?(role?"dashboard":"role"):"login";
+  if(!location.hash)location.hash=user?.verified?(role==="admin"?"admin":(role?"dashboard":"role")):"login";
   updateNetworkStatus();
   syncPending();
   loadMarketData();
