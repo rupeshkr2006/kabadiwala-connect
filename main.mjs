@@ -184,6 +184,68 @@ document.addEventListener("DOMContentLoaded", () => {
     bindShell();document.getElementById("refreshMarket").onclick=()=>loadMarketData({rerender:true,force:true});if(!marketLoaded){marketLoaded=true;loadMarketData({rerender:true,force:true});}
   }
 
+  T.en.matchRecycler="Find recyclers"; T.en.recommended="Recommended recyclers"; T.en.select="Select"; T.en.confirmHandover="Confirm handover"; T.en.payment="Record payment"; T.en.earnings="Earnings"; T.en.totalEarned="Total earned"; T.en.paid="Paid"; T.en.pendingAmount="Pending"; T.en.noEarnings="No earnings yet."; T.en.workflowNote="Handover requires confirmation from both sides."; T.en.paidSuccess="Payment recorded";
+  T.hi.matchRecycler="रीसायकलर खोजें"; T.hi.recommended="सुझाए गए रीसायकलर"; T.hi.select="चुनें"; T.hi.confirmHandover="हैंडओवर की पुष्टि करें"; T.hi.payment="भुगतान दर्ज करें"; T.hi.earnings="कमाई"; T.hi.totalEarned="कुल कमाई"; T.hi.paid="भुगतान हुआ"; T.hi.pendingAmount="पेंडिंग"; T.hi.noEarnings="अभी कोई कमाई नहीं।"; T.hi.workflowNote="हैंडओवर के लिए दोनों पक्षों की पुष्टि जरूरी है।"; T.hi.paidSuccess="भुगतान दर्ज हुआ";
+  T.mr.matchRecycler="रिसायकलर शोधा"; T.mr.recommended="सुचवलेले रिसायकलर"; T.mr.select="निवडा"; T.mr.confirmHandover="हँडओव्हरची पुष्टी करा"; T.mr.payment="पेमेंट नोंदवा"; T.mr.earnings="कमाई"; T.mr.totalEarned="एकूण कमाई"; T.mr.paid="पेड"; T.mr.pendingAmount="प्रलंबित"; T.mr.noEarnings="अजून कमाई नाही."; T.mr.workflowNote="हँडओव्हरसाठी दोन्ही बाजूंची पुष्टी आवश्यक आहे."; T.mr.paidSuccess="पेमेंट नोंदले";
+
+  async function apiPost(action,body){
+    const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
+    return data;
+  }
+  async function apiGet(action){
+    const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{credentials:"same-origin",cache:"no-store"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
+    return data;
+  }
+  async function readDataUrl(file){
+    return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+  }
+  async function syncBackendLot(r){
+    if(!r.lotReference)r.lotReference="LOT-"+Date.now().toString(36).toUpperCase();
+    const payload={lotReference:r.lotReference,category:r.category,itemType:r.itemType,weightKg:weightKg(r.quantity),condition:r.condition,notes:r.notes,address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice,status:String(r.status||"Pending").toLowerCase(),collectedAt:r.collectedAt||new Date().toISOString()};
+    try{await apiPost("lot",payload);return true;}catch(err){enqueue({id:"lot:"+r.lotReference,type:"lot",data:payload}).catch(()=>{});return false;}
+  }
+  async function uploadLotPhoto(r,file){
+    if(!file||!navigator.onLine||!r.lotReference)return;
+    try{const image=await readDataUrl(file);const data=await apiPost("photo",{lotReference:r.lotReference,image});r.imageUrl=data.image_url;}catch(err){console.warn("Photo upload:",err);}
+  }
+  async function chooseRecycler(r){
+    try{const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)});const first=data.rows?.[0];if(first){r.recyclerExternalId=first.external_id;r.recyclerName=first.facility_name;}return data;}catch{return {rows:[]};}
+  }
+  async function acceptWorkflow(r){
+    await syncBackendLot(r);
+    if(!r.recyclerExternalId)await chooseRecycler(r);
+    try{const data=await apiPost("transaction",{lotReference:r.lotReference,recyclerExternalId:r.recyclerExternalId||null,quotedPrice:r.currentOffer,finalPrice:r.currentOffer});r.transactionReference=data.transaction?.transaction_reference||r.transactionReference;}
+    catch{if(!r.transactionReference)r.transactionReference="TX-"+Date.now().toString(36).toUpperCase();enqueue({id:"transaction:"+r.transactionReference,type:"transaction",data:{transaction_reference:r.transactionReference,lot_reference:r.lotReference,collector_phone:accountId,recycler_external_id:r.recyclerExternalId||null,quoted_price:r.currentOffer,final_price:r.currentOffer,payment_method:null,payment_status:"pending",status:"accepted",collection_address:r.address,collection_latitude:r.lat,collection_longitude:r.lng,collected_at:r.collectedAt||new Date().toISOString()}}).catch(()=>{});}
+  }
+  async function showMatches(r){
+    const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)}).catch(()=>({rows:[]}));
+    const rows=data.rows||[];const old=document.getElementById("matchModal");if(old)old.remove();
+    const modal=document.createElement("div");modal.id="matchModal";modal.className="map-modal";
+    const cards=rows.length?rows.map(x=>'<article class="match-card"><div><strong>'+esc(x.facility_name)+'</strong><small>'+esc(x.city||x.district||"")+' · '+(x.distance_km==null?"Location not available":x.distance_km+" km")+'</small><small>Score: '+esc(x.match_score)+' · '+esc(x.authorization_status||"")+'</small><small>Pickup: '+(x.pickup_available?"Yes":"No")+'</small></div><button class="primary" data-select-recycler="'+esc(x.external_id)+'">'+tr("select")+'</button></article>').join(""):'<div class="empty">'+tr("noMarket")+'</div>';
+    modal.innerHTML='<div class="map-modal-card"><div class="map-modal-head"><div><strong>'+tr("recommended")+'</strong><small>'+esc(r.category)+' · '+esc(r.quantity)+'</small></div><button class="icon-btn" id="closeMatch">×</button></div><div class="match-list">'+cards+'</div></div>';
+    document.body.appendChild(modal);document.getElementById("closeMatch").onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    modal.querySelectorAll("[data-select-recycler]").forEach(b=>b.onclick=()=>{const x=rows.find(q=>q.external_id===b.dataset.selectRecycler);if(x){r.recyclerExternalId=x.external_id;r.recyclerName=x.facility_name;save();toast(x.facility_name);modal.remove();render();}});
+  }
+  async function confirmHandover(r){
+    if(!r.transactionReference)await acceptWorkflow(r);
+    if(!r.transactionReference)return toast(tr("required"));
+    try{const data=await apiPost("handover",{transactionReference:r.transactionReference,actualWeightKg:weightKg(r.quantity),lat:pos?.lat||r.lat,lng:pos?.lng||r.lng,address:profile?.area||r.address,note:"Confirmed in app"});r.handoverReference=data.handover?.handover_reference;r.collectorConfirmed=!!data.handover?.collector_confirmed;r.recyclerConfirmed=!!data.handover?.recycler_confirmed;r.status=data.both_confirmed?"Handed over":"Accepted";save();render();toast(data.both_confirmed?tr("saved"):tr("confirmHandover"));}catch(err){enqueue({id:"handover:"+r.transactionReference+":"+role,type:"handover",data:{transaction_reference:r.transactionReference,handover_reference:r.handoverReference||("HREF-"+Date.now().toString(36).toUpperCase()),actual_weight_kg:weightKg(r.quantity),handover_latitude:pos?.lat||r.lat,handover_longitude:pos?.lng||r.lng,handover_address:profile?.area||r.address,collector_confirmed:role==="collector",recycler_confirmed:role==="recycler",handover_at:new Date().toISOString()}}).catch(()=>{});toast("Saved offline");}
+  }
+  async function recordPayment(r){
+    const amount=Number(prompt("Final payment amount (₹)",String(r.agreedPrice||r.currentOffer||r.expectedPrice||0)));if(!Number.isFinite(amount)||amount<=0)return;
+    const method=(prompt("Payment method: cash or digital","cash")||"cash").toLowerCase()==="digital"?"digital":"cash";
+    if(!r.transactionReference)await acceptWorkflow(r);if(!r.transactionReference)return;
+    try{await apiPost("payment",{transactionReference:r.transactionReference,amount,method});r.agreedPrice=amount;r.status="Completed";r.finalSaleValue=amount;r.paymentStatus="paid";save();render();toast(tr("paidSuccess"));}catch{enqueue({id:"payment:"+r.transactionReference,type:"payment",data:{transaction_reference:r.transactionReference,amount,status:"paid",payment_method:method,payment_reference:null,paid_at:new Date().toISOString()}}).catch(()=>{});r.agreedPrice=amount;r.status="Completed";save();render();toast("Saved offline");}
+  }
+  async function earningsScreen(){
+    let data={rows:[],total:0,paid:0,pending:0};try{data=await apiGet("ledger");}catch{}
+    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(data.total)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(data.paid)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(data.pending)+'</strong></section></div><section class="panel ledger-list">'+(data.rows?.length?data.rows.map(x=>'<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference)+'</span></div><div><span>'+esc(x.payment_method||"—")+'</span><span>'+esc(x.status)+'</span></div></div>').join(""):'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';bindShell();
+  }
+
   const save = () => {
     localStorage.lang=lang; localStorage.role=role; localStorage.pos=JSON.stringify(pos);
     localStorage.requests=JSON.stringify(requests); localStorage.kcUser=JSON.stringify(user);
