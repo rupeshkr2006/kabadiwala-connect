@@ -15,6 +15,18 @@ export default async function handler(req,res){
       if(op.type==="profile"){
         const phone=String(p.phone||"").replace(/\D/g,"");if(phone!==session.phone)throw new Error("Profile session mismatch.");
         await call("/rest/v1/profiles?on_conflict=phone",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({phone,role:p.role||session.role,name:p.name||"New User",preferred_language:p.preferred_language||"en",general_location:p.general_location||null,business_name:p.business_name||null,accepted_materials:Array.isArray(p.accepted_materials)?p.accepted_materials:[],pickup_radius_km:Number(p.pickup_radius_km||5),latitude:p.latitude??null,longitude:p.longitude??null,pickup_available:p.pickup_available!==false,service_area:p.service_area||null,registration_number:p.registration_number||null,gst_number:p.gst_number||null,authorization_number:p.authorization_number||null,authorization_type:p.authorization_type||null,authorization_expiry:p.authorization_expiry||null,contact_email:p.contact_email||null,offered_rate_notes:p.offered_rate_notes||null,facility_address:p.facility_address||p.general_location||null,active:true,profile_source:p.profile_source||"app"})});
+      }else if(op.type==="recycler_profile"){
+        const phone=String(p.phone||"").replace(/\D/g,"");if(phone!==session.phone||session.role!=="recycler")throw new Error("Recycler profile session mismatch.");
+        const materials=Array.isArray(p.materials)?p.materials:String(p.materials||"").split(",").map(x=>x.trim()).filter(Boolean);
+        await call("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({
+          role:"recycler",name:p.name||"Recycler",preferred_language:["en","hi","mr"].includes(p.preferred_language)?p.preferred_language:"en",
+          general_location:p.area||null,facility_address:p.facilityAddress||p.area||null,business_name:p.business||null,accepted_materials:materials,
+          pickup_radius_km:Number(String(p.radius||"5").match(/\d+/)?.[0]||5),latitude:p.latitude??null,longitude:p.longitude??null,
+          pickup_available:p.pickupAvailable!==false,service_area:p.serviceArea||null,registration_number:p.registrationNumber||null,
+          gst_number:p.gstNumber||null,authorization_number:p.authorizationNumber||null,authorization_type:p.authorizationType||null,
+          authorization_expiry:p.authorizationExpiry||null,contact_email:p.contactEmail||null,offered_rate_notes:p.offeredRateNotes||null,
+          verification_status:"pending",verification_badge:false,verified_at:null,verified_by:null,verification_note:null,active:true,profile_source:"recycler_registration"
+        })});
       }else if(op.type==="lot"){
         const ref=String(p.lotReference||"");if(!ref)throw new Error("lotReference required.");
         await call("/rest/v1/platform_lots?on_conflict=lot_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({lot_reference:ref,collector_phone:session.phone,material_category:p.category||"unknown",sub_category:p.itemType||null,condition:p.condition||null,approximate_weight_kg:Number(p.weightKg||0),source_type:p.sourceType||"field",collection_address:p.address||null,collection_latitude:p.lat??null,collection_longitude:p.lng??null,estimated_value:p.indicativeTotal??null,quoted_value:p.expectedPrice??null,status:p.status||"pending",notes:p.notes||null,collected_at:p.collectedAt||new Date().toISOString(),image_url:p.imageUrl||null,source_photo_count:p.imageUrl?1:0})});
