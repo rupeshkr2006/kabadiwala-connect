@@ -1,10 +1,11 @@
-const CACHE_NAME = "kabadiwala-connect-v2";
+const CACHE_NAME = "kabadiwala-connect-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/main.mjs",
   "/styles.css",
-  "/favicon.svg"
+  "/favicon.svg",
+  "/offline-db.mjs"
 ];
 
 self.addEventListener("install", event => {
