@@ -609,22 +609,37 @@ document.addEventListener("DOMContentLoaded", () => {
     bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=async()=>{if(confirm(tr("confirmReset"))){await fetch("/api/session",{method:"DELETE",credentials:"same-origin"}).catch(()=>{});sessionReady=false;localStorage.clear();location.hash="login";render();}};
   }
   function initMap(id,compact=false){
-    const el=document.getElementById(id);if(!el||!window.L)return;
-    if(maps[id]){try{maps[id].remove();}catch(e){}}
-    const center=pos?[pos.lat,pos.lng]:[demo.lat,demo.lng];
-    const map=L.map(el,{scrollWheelZoom:false}).setView(center,compact?13:14);
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(!window.L){
+      setTimeout(()=>initMap(id,compact),200);
+      return;
+    }
+    if(maps[id]){
+      try{maps[id].remove();}catch(e){}
+      delete maps[id];
+    }
+    const center=pos?[Number(pos.lat),Number(pos.lng)]:[demo.lat,demo.lng];
+    const map=L.map(el,{scrollWheelZoom:false,preferCanvas:true}).setView(center,compact?13:14);
     maps[id]=map;
-    const tiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19});
+    const tiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      attribution:"© OpenStreetMap contributors",maxZoom:19,crossOrigin:true
+    });
     tiles.on("tileerror",()=>{const w=document.getElementById("where");if(w)w.textContent=tr("locationFallback");});
     tiles.addTo(map);
-    if(pos)L.marker([pos.lat,pos.lng]).addTo(map).bindPopup(tr("locationReady")).openPopup();
+    if(pos)L.marker([Number(pos.lat),Number(pos.lng)]).addTo(map).bindPopup(tr("locationReady"));
     if(role==="collector"){
-      (recyclers||[]).filter(x=>Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude))).slice(0,12).forEach(x=>L.marker([Number(x.latitude),Number(x.longitude)]).addTo(map).bindPopup(esc(x.facility_name||"Recycler")));
-    } else {
-      requests.slice(0,8).forEach(r=>L.marker([r.lat||demo.lat,r.lng||demo.lng]).addTo(map).bindPopup(esc(r.collector)+" · "+esc(r.category)));
+      (recyclers||[]).filter(x=>Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude))).slice(0,12)
+        .forEach(x=>L.marker([Number(x.latitude),Number(x.longitude)]).addTo(map).bindPopup(esc(x.facility_name||"Recycler")));
+    }else{
+      requests.slice(0,8).forEach(r=>{
+        const lat=Number(r.lat),lng=Number(r.lng);
+        if(Number.isFinite(lat)&&Number.isFinite(lng))
+          L.marker([lat,lng]).addTo(map).bindPopup(esc(r.collector||"Collector")+" · "+esc(r.category||"Pickup"));
+      });
     }
     map.on("click",e=>setPosition(e.latlng.lat,e.latlng.lng,map,id));
-    setTimeout(()=>map.invalidateSize(),150);
+    requestAnimationFrame(()=>setTimeout(()=>map.invalidateSize(),100));
   }
   function setPosition(lat,lng,map,id){
     pos={lat,lng};save();
