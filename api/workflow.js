@@ -64,7 +64,10 @@ export default async function handler(req,res){
     }
     if(req.method==="POST"&&action==="match"){
       const p=req.body||{},lat=Number(p.lat),lng=Number(p.lng),material=String(p.category||"e-waste");
-      const rows=await rest("/rest/v1/recycler_directory?active=eq.true&select=*");
+      const dirs=await rest("/rest/v1/recycler_directory?active=eq.true&select=*").catch(()=>[]);
+      const accounts=await rest("/rest/v1/profiles?role=eq.recycler&active=eq.true&select=id,phone,name,business_name,general_location,accepted_materials,pickup_radius_km,latitude,longitude").catch(()=>[]);
+      const accountRows=accounts.map(x=>({external_id:"ACCOUNT:"+x.phone,facility_name:x.business_name||x.name||"Recycler account",address:x.general_location||"",city:x.general_location||"",district:"",state:"Andhra Pradesh",materials_accepted:Array.isArray(x.accepted_materials)?x.accepted_materials:[],authorization_status:"Account registered",authorization_source:"Self-registered in Kabadiwala Connect",installed_capacity_mta:null,offered_rate_tier:"User-set offer",pickup_available:true,service_area_km:Number(x.pickup_radius_km)||5,latitude:x.latitude??null,longitude:x.longitude??null,account:true}));
+      const rows=[...(Array.isArray(dirs)?dirs:[]),...accountRows];
       const ranked=rows.map(x=>{
         const hasCoords=Number.isFinite(lat)&&Number.isFinite(lng)&&Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude)); const distance=hasCoords?haversine(lat,lng,Number(x.latitude),Number(x.longitude)):null;
         const mm=materialMatch(material,x.materials_accepted), auth=authorizedName(x.authorization_status), pickup=!!x.pickup_available;
