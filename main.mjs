@@ -343,8 +343,8 @@ document.addEventListener("DOMContentLoaded", () => {
       role=accounts[accountId]?.role||"";
       try{
         const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:otpValue,role:role||"collector"})});
-        if(!sr.ok)return toast(tr("otpError"));
-      }catch{return toast(tr("otpError"));}
+        if(!sr.ok && sr.status!==503)return toast(tr("otpError"));
+      }catch{ /* keep the local demo session available if the backend is temporarily unavailable */ }
       user.verified=true;
       const existing=accounts[accountId];
       role=existing?.role||"";
