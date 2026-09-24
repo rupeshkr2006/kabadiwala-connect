@@ -329,7 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)}).catch(()=>({rows:recyclers.filter(x=>(x.materials_accepted||[]).some(m=>String(m).toLowerCase().includes(String(r.category||"").toLowerCase())||String(r.category||"").toLowerCase().includes(String(m).toLowerCase())||String(r.category||"").toLowerCase()==="e-waste"))}));
     const rows=data.rows||[];const old=document.getElementById("matchModal");if(old)old.remove();
     const modal=document.createElement("div");modal.id="matchModal";modal.className="map-modal";
-    const cards=rows.length?rows.map(x=>'<article class="match-card"><div><strong>'+esc(x.facility_name)+'</strong><small>'+esc(x.city||x.district||"")+' · '+(x.distance_km==null?"Location not available":x.distance_km+" km")+'</small><small>Score: '+esc(x.match_score)+' · '+esc(x.authorization_status||"")+'</small><small>Pickup: '+(x.pickup_available?"Yes":"No")+'</small></div><button class="primary" data-select-recycler="'+esc(x.external_id)+'">'+tr("select")+'</button></article>').join(""):'<div class="empty">'+tr("noMarket")+'</div>';
+    const cards=rows.length?rows.map(x=>'<article class="match-card"><div><strong>'+esc(x.facility_name)+'</strong><small>'+esc(x.city||x.district||"")+' · '+(x.distance_km==null?"Location not available":x.distance_km+" km")+'</small><small>Score: '+esc(x.match_score)+' · '+esc(x.authorization_status||"")+'</small><small>Pickup: '+(x.pickup_available?"Yes":"No")+'</small><small>'+(x.verification_badge?'★ '+tr("verified"):tr("notVerified"))+'</small></div><button class="primary" data-select-recycler="'+esc(x.external_id)+'">'+tr("select")+'</button></article>').join(""):'<div class="empty">'+tr("noMarket")+'</div>';
     modal.innerHTML='<div class="map-modal-card"><div class="map-modal-head"><div><strong>'+tr("recommended")+'</strong><small>'+esc(r.category)+' · '+esc(r.quantity)+'</small></div><button class="icon-btn" id="closeMatch">×</button></div><div class="match-list">'+cards+'</div></div>';
     document.body.appendChild(modal);document.getElementById("closeMatch").onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove();};
     modal.querySelectorAll("[data-select-recycler]").forEach(b=>b.onclick=()=>{const x=rows.find(q=>q.external_id===b.dataset.selectRecycler);if(x){r.recyclerExternalId=x.external_id;r.recyclerName=x.facility_name;save();toast(x.facility_name);modal.remove();render();}});
@@ -511,43 +511,66 @@ document.addEventListener("DOMContentLoaded", () => {
     if(role==="admin"){go("admin");return;}
     const docs=Array.isArray(profile?.documents)?profile.documents:[];
     const docTypes=[["authorization","E-waste authorization certificate"],["registration","Business / registration certificate"],["gst","GST certificate (if applicable)"],["address_proof","Facility / address proof"]];
-    const docHtml=isR?'<section class="recycler-docs"><h2>'+tr("documentRequired")+'</h2><p class="muted">'+tr("reverification")+'</p>'+docTypes.map(([type,label])=>{const found=docs.find(d=>d.document_type===type);return '<div class="doc-row"><div><strong>'+label+'</strong><small>'+esc(found?.file_name||tr("noDocuments"))+'</small></div><label class="secondary doc-upload">'+tr("upload")+'<input type="file" data-doc-type="'+type+'" accept=".pdf,image/png,image/jpeg,image/webp"></label></div>';}).join("")+'</section>':'';
-    A.innerHTML='<main class="auth"><div class="auth-card setup-card wide-setup"><p class="eyebrow">'+tr("setup")+'</p><h1>'+tr(role)+'</h1><form id="setupForm">'+
-      '<label>'+tr("name")+'<input id="name" value="'+esc(profile?.name||"")+'" required></label>'+
-      (isR?'<label>'+tr("business")+'<input id="business" value="'+esc(profile?.business||"")+'" required></label>'+
-      '<label>'+tr("contactEmail")+'<input id="contactEmail" type="email" value="'+esc(profile?.contactEmail||"")+'" placeholder="business@example.com"></label>'+
-      '<label>'+tr("facilityAddress")+'<textarea id="facilityAddress" rows="2">'+esc(profile?.facilityAddress||profile?.area||"")+'</textarea></label>'+
-      '<label>'+tr("registrationNumber")+'<input id="registrationNumber" value="'+esc(profile?.registrationNumber||"")+'"></label>'+
-      '<label>'+tr("gstNumber")+'<input id="gstNumber" value="'+esc(profile?.gstNumber||"")+'"></label>'+
-      '<label>'+tr("authorizationNumber")+'<input id="authorizationNumber" value="'+esc(profile?.authorizationNumber||"")+'"></label>'+
-      '<label>'+tr("authorizationType")+'<input id="authorizationType" value="'+esc(profile?.authorizationType||"")+'" placeholder="CPCB / SPCB authorization"></label>'+
-      '<label>'+tr("authorizationExpiry")+'<input id="authorizationExpiry" type="date" value="'+esc(profile?.authorizationExpiry||"")+'"></label>'+
-      '<label>'+tr("materials")+'<input id="materials" value="'+esc(profile?.materials||"PCB, Cable, Battery")+'" placeholder="PCB, Cable, Battery"></label>'+
-      '<label>'+tr("pickupAvailable")+'<select id="pickupAvailable"><option value="yes">Yes</option><option value="no">No</option></select></label>'+
-      '<label>'+tr("serviceArea")+'<input id="serviceArea" value="'+esc(profile?.serviceArea||"")+'" placeholder="Krishna District"></label>'+
-      '<label>'+tr("offeredRateNotes")+'<textarea id="offeredRateNotes" rows="2" placeholder="Optional rates / buying notes">'+esc(profile?.offeredRateNotes||"")+'</textarea></label>'
-      :'')+
-      '<label>'+tr("area")+'<input id="area" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada" required></label><label>'+tr("radius")+'<select id="radius"><option '+(String(profile?.radius).startsWith("5")?"selected":"")+'>5 km</option><option '+(String(profile?.radius).startsWith("10")?"selected":"")+'>10 km</option><option '+(String(profile?.radius).startsWith("20")?"selected":"")+'>20 km</option></select></label>'+
-      '<div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div>'+docHtml+
-      '<button class="primary full">'+(isR?tr("saveProfile"):tr("save"))+' <span>→</span></button></form></div></main>';
+
+    const commonFields=[
+      '<label>'+tr("name")+'<input id="name" value="'+esc(profile?.name||"")+'" required></label>',
+      '<label>'+tr("area")+'<input id="area" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada" required></label>',
+      '<label>'+tr("radius")+'<select id="radius"><option '+(String(profile?.radius||"5").startsWith("5")?"selected":"")+'>5 km</option><option '+(String(profile?.radius||"").startsWith("10")?"selected":"")+'>10 km</option><option '+(String(profile?.radius||"").startsWith("20")?"selected":"")+'>20 km</option></select></label>'
+    ];
+    if(isR){
+      commonFields.splice(1,0,
+        '<label>'+tr("business")+'<input id="business" value="'+esc(profile?.business||"")+'" required></label>',
+        '<label>'+tr("contactEmail")+'<input id="contactEmail" type="email" value="'+esc(profile?.contactEmail||"")+'" placeholder="business@example.com"></label>',
+        '<label>'+tr("facilityAddress")+'<textarea id="facilityAddress" rows="2">'+esc(profile?.facilityAddress||profile?.area||"")+'</textarea></label>',
+        '<label>'+tr("registrationNumber")+'<input id="registrationNumber" value="'+esc(profile?.registrationNumber||"")+'"></label>',
+        '<label>'+tr("gstNumber")+'<input id="gstNumber" value="'+esc(profile?.gstNumber||"")+'"></label>',
+        '<label>'+tr("authorizationNumber")+'<input id="authorizationNumber" value="'+esc(profile?.authorizationNumber||"")+'"></label>',
+        '<label>'+tr("authorizationType")+'<input id="authorizationType" value="'+esc(profile?.authorizationType||"")+'" placeholder="CPCB / SPCB authorization"></label>',
+        '<label>'+tr("authorizationExpiry")+'<input id="authorizationExpiry" type="date" value="'+esc(profile?.authorizationExpiry||"")+'"></label>',
+        '<label>'+tr("materials")+'<input id="materials" value="'+esc(profile?.materials||"PCB, Cable, Battery")+'" placeholder="PCB, Cable, Battery"></label>',
+        '<label>'+tr("pickupAvailable")+'<select id="pickupAvailable"><option value="yes">Yes</option><option value="no">No</option></select></label>',
+        '<label>'+tr("serviceArea")+'<input id="serviceArea" value="'+esc(profile?.serviceArea||"")+'" placeholder="Krishna District"></label>',
+        '<label>'+tr("offeredRateNotes")+'<textarea id="offeredRateNotes" rows="2" placeholder="Optional rates / buying notes">'+esc(profile?.offeredRateNotes||"")+'</textarea></label>'
+      );
+    }
+
+    const docHtml=isR?'<section class="recycler-docs"><h2>'+tr("documentRequired")+'</h2><p class="muted">'+tr("reverification")+'</p>'+docTypes.map(([type,label])=>{
+      const found=docs.find(d=>d.document_type===type);
+      return '<div class="doc-row"><div><strong>'+label+'</strong><small>'+esc(found?.file_name||tr("noDocuments"))+'</small></div><label class="secondary doc-upload">'+tr("upload")+'<input type="file" data-doc-type="'+type+'" accept=".pdf,image/png,image/jpeg,image/webp"></label></div>';
+    }).join("")+'</section>':'';
+
+    A.innerHTML='<main class="auth"><div class="auth-card setup-card '+(isR?"wide-setup":"")+'"><p class="eyebrow">'+tr("setup")+'</p><h1>'+tr(role)+'</h1><form id="setupForm">'+commonFields.join("")+'<div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div>'+docHtml+'<button class="primary full">'+(isR?tr("saveProfile"):tr("save"))+' <span>→</span></button></form></div></main>';
     if(window.L)initMap("miniMap",true);
     document.getElementById("loc").onclick=getLocation;
     document.getElementById("mapPick").onclick=()=>enableMapPick("miniMap");
-    if(isR){const sel=document.getElementById("pickupAvailable");if(sel)sel.value=profile?.pickupAvailable===false?"no":"yes";A.querySelectorAll("[data-doc-type]").forEach(input=>input.onchange=()=>uploadRecyclerDocument(input.dataset.docType,input.files?.[0]));}
+    if(isR){
+      const sel=document.getElementById("pickupAvailable");if(sel)sel.value=profile?.pickupAvailable===false?"no":"yes";
+      A.querySelectorAll("[data-doc-type]").forEach(input=>input.onchange=()=>uploadRecyclerDocument(input.dataset.docType,input.files?.[0]));
+    }
     document.getElementById("setupForm").onsubmit=async e=>{
       e.preventDefault();
       const next={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};
       if(isR){
-        Object.assign(next,{business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,facilityAddress:document.getElementById("facilityAddress").value,
-          registrationNumber:document.getElementById("registrationNumber").value,gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,
-          authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,materials:document.getElementById("materials").value,
-          pickupAvailable:document.getElementById("pickupAvailable").value!=="no",serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value});
+        Object.assign(next,{
+          business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,
+          facilityAddress:document.getElementById("facilityAddress").value,registrationNumber:document.getElementById("registrationNumber").value,
+          gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,
+          authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,
+          materials:document.getElementById("materials").value,pickupAvailable:document.getElementById("pickupAvailable").value!=="no",
+          serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value
+        });
       }
       profile=next;save();sessionReady=false;
-      if(isR&&navigator.onLine){try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}catch(err){console.warn(err);toast(err.message||tr("photoError"));}}else if(isR){enqueue({id:"recycler_profile:"+accountId,type:"recycler_profile",data:{...profile,recycler_profile_update:true,phone:accountId}}).catch(()=>{});}
+      if(isR&&navigator.onLine){
+        try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}
+        catch(err){console.warn(err);toast(err.message||tr("photoError"));}
+      }else if(isR){
+        enqueue({id:"recycler_profile:"+accountId,type:"recycler_profile",data:{...profile,phone:accountId}}).catch(()=>{});
+      }
       await syncPending();loadRecyclerData({force:true});go("dashboard");
     };
   }
+
 
   async function uploadRecyclerDocument(type,file){
     if(!file)return;
@@ -1094,4 +1117,5 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSharedRequests();
   startSharedPolling();
   render();
+  ensureLeafletRuntime().then(ok=>{if(ok&&document.querySelector(".map"))render();}).catch(()=>{});
 });
