@@ -1,7 +1,7 @@
 export default async function handler(req,res){
   if(req.method!=="GET") return res.status(405).json({error:"Method not allowed"});
   const url=String(process.env.SUPABASE_URL||"").trim();
-  const key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+  const key=String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
   if(!url||!key) return res.status(503).json({error:"Market data is not configured on Vercel."});
   try{
     const days=Math.min(Math.max(Number(req.query?.days||30)||30,1),90);
