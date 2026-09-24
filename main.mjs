@@ -31,13 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
   let recyclers = [];
   let recyclersLoaded = false;
-  const FALLBACK_RECYCLERS = [
-    {external_id:"AP-REC-001",facility_name:"Green Waves Environmental Solution",address:"Sy. No. 43/1, Mindi (V), Gajuwaka (M), Visakhapatnam",city:"Visakhapatnam",district:"Visakhapatnam",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:50},
-    {external_id:"AP-REC-002",facility_name:"Apna Bhoomi E-Waste Management Services",address:"Sy. No. 119, Near Bharat Junction, Kusalapuram (V), Etcherla (M), Srikakulam",city:"Srikakulam",district:"Srikakulam",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:40},
-    {external_id:"AP-REC-003",facility_name:"Clean Earth Green Earth Solutions",address:"Krishna District",city:"Vijayawada",district:"Krishna",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:20},
-    {external_id:"AP-REC-004",facility_name:"E-Parisaraa Pvt Ltd",address:"Plot No. 42A/4, Sy. No. 285/288, Gollapuram (V), Hindupuram (M), Anantapur",city:"Anantapur",district:"Anantapur",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","CRT","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:45},
-    {external_id:"AP-REC-005",facility_name:"Sungeel India Recycling Pvt Ltd",address:"Plot No. 59C & 59D, APIIC Industrial Park, Gollapuram (V), Hindupur (M), Anantapur",city:"Anantapur",district:"Anantapur",state:"Andhra Pradesh",materials_accepted:["PCB","cables","batteries","mixed e-waste"],authorization_status:"Authorized (CPCB)",authorization_source:"CPCB E-Waste Recycler List, as on 08-06-2023 (ndmc.gov.in)",pickup_available:true,service_area_km:55}
-  ];
 
   const T = {
     en: {
@@ -174,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const res=await fetch("/api/recyclers",{cache:"no-store"});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Recycler data unavailable");
       recyclers=Array.isArray(data.recyclers)?data.recyclers:[];await putState("recyclers",recyclers).catch(()=>{});
       if(rerender && location.hash==="#recyclers")render();
-    }catch(err){console.warn("Recycler directory:",err);if(!recyclers.length)recyclers=FALLBACK_RECYCLERS;await putState("recyclers",recyclers).catch(()=>{});if(rerender && location.hash==="#recyclers")render();}
+    }catch(err){console.warn("Recycler directory:",err);await putState("recyclers",recyclers||[]).catch(()=>{});if(rerender && location.hash==="#recyclers")render();}
   }
   function recyclerScreen(){
     const rows=recyclers||[];
@@ -317,7 +310,11 @@ document.addEventListener("DOMContentLoaded", () => {
       putState("app",{lang,role,pos,requests,user,profile,accountId}).catch(()=>{});
       enqueue({id:"profile:"+accountId,type:"profile",data:{
         phone:accountId,role,name:profile?.name||"New User",
-        preferred_language:lang,general_location:profile?.area||null
+        preferred_language:lang,general_location:profile?.area||null,
+        business_name:profile?.business||null,
+        accepted_materials:role==="recycler"?String(profile?.materials||"").split(",").map(x=>x.trim()).filter(Boolean):[],
+        pickup_radius_km:Number(String(profile?.radius||"5").match(/\d+/)?.[0]||5),
+        latitude:pos?.lat??null,longitude:pos?.lng??null
       }}).catch(()=>{});
     }
   };
@@ -348,15 +345,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   function toast(text){ const d=document.createElement("div"); d.className="toast"; d.textContent=text; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
   function go(p){ location.hash=p; render(); }
-  function seedData(){
-    if(!requests.length) {
-      requests = [
-        {id:"demo-1",category:"Plastic",quantity:"8 kg",condition:"Good",notes:"Bottles and containers",address:"Vijayawada",lat:16.5062,lng:80.648,status:"Pending",collector:"Demo Collector"},
-        {id:"demo-2",category:"Cardboard",quantity:"15 kg",condition:"Used",notes:"Flattened boxes",address:"Benz Circle",lat:16.5108,lng:80.632,status:"Pending",collector:"Demo Collector 2"}
-      ];
-      save();
-    }
-    normalizePricing();
+  function cleanDemoRequests(){
+    const before=requests.length;
+    requests=requests.filter(r=>!String(r.id||"").startsWith("demo-") && !String(r.lotReference||"").startsWith("DEMO-"));
+    if(requests.length!==before)localStorage.requests=JSON.stringify(requests);
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
@@ -593,7 +585,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tiles.addTo(map);
     if(pos)L.marker([pos.lat,pos.lng]).addTo(map).bindPopup(tr("locationReady")).openPopup();
     if(role==="collector"){
-      [[16.515,80.637,"Green Cycle Recycler"],[16.495,80.665,"Eco Metals"],[16.523,80.610,"City Recycle Hub"]].forEach(x=>L.marker([x[0],x[1]]).addTo(map).bindPopup(x[2]));
+      (recyclers||[]).filter(x=>Number.isFinite(Number(x.latitude))&&Number.isFinite(Number(x.longitude))).slice(0,12).forEach(x=>L.marker([Number(x.latitude),Number(x.longitude)]).addTo(map).bindPopup(esc(x.facility_name||"Recycler")));
     } else {
       requests.slice(0,8).forEach(r=>L.marker([r.lat||demo.lat,r.lng||demo.lng]).addTo(map).bindPopup(esc(r.collector)+" · "+esc(r.category)));
     }
@@ -735,6 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
     dashboard();
   }
   window.addEventListener("hashchange",render);
+  cleanDemoRequests();
   if(!location.hash)location.hash=user?.verified?(role?"dashboard":"role"):"login";
   updateNetworkStatus();
   syncPending();
