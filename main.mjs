@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let marketLatest = [];
   let marketTrends = [];
   let marketLoaded = false;
+  let sharedRefreshing = false;
+  let sharedPoll = null;
   const FALLBACK_MARKET = [
     {material_name:"Batteries",buying_price:105,unit:"kg",market_min:94.5,market_max:115.5,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
     {material_name:"Cables",buying_price:440,unit:"kg",market_min:396,market_max:484,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
@@ -180,6 +182,34 @@ document.addEventListener("DOMContentLoaded", () => {
     bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}
   }
 
+  async function loadSharedRequests({rerender=false}={}){
+    if(sharedRefreshing||!navigator.onLine||!user?.verified)return;
+    sharedRefreshing=true;
+    try{
+      const data=await apiGet("lots");
+      const remote=Array.isArray(data.rows)?data.rows:[];
+      const mapped=remote.map(x=>{
+        const statusMap={pending:"Pending",accepted:"Accepted",handed_over:"Handed over",completed:"Completed",cancelled:"Cancelled"};
+        const status=statusMap[String(x.status||"pending").toLowerCase()]||String(x.status||"Pending");
+        const offers=(x.offers||[]).map(o=>({by:o.actor_role==="recycler"?"recycler":"collector",price:Number(o.price),at:new Date(o.created_at||Date.now()).getTime(),actorRef:o.actor_ref}));
+        const current=Number(x.latest_offer_price||x.quoted_value||x.estimated_value||0);
+        return {id:x.lot_reference,lotReference:x.lot_reference,category:x.material_category,itemType:x.sub_category||"",quantity:Number(x.approximate_weight_kg||0)+" kg",condition:x.condition||"Used",notes:x.notes||"",address:x.collection_address||"Vijayawada",lat:x.collection_latitude??demo.lat,lng:x.collection_longitude??demo.lng,status,collector:x.collector_phone?"Collector":"Collector",collectorPhone:role==="collector"?accountId:x.collector_phone,collectorPhoneHidden:role==="recycler",collectedAt:x.collected_at||null,imageUrl:x.image_url||null,rate:rateFor(x.material_category),minimumRate:minRateFor(x.material_category),indicativeTotal:Number(x.estimated_value||0)||indicativeFor(x.material_category,String(x.approximate_weight_kg||0)+" kg"),minimumPrice:minimumFor(x.material_category,String(x.approximate_weight_kg||0)+" kg"),expectedPrice:Number(x.quoted_value||x.estimated_value||0),askingPrice:Number(offers[0]?.price||x.quoted_value||x.estimated_value||0),currentOffer:current,priceStatus:offers.at(-1)?.actor_role==="recycler"?tr("recyclerOffer"):tr("collectorOffer"),offers,recyclerExternalId:x.recycler_external_id||offers.at(-1)?.actorRef||null,transactionReference:x.transaction_reference||null,agreedPrice:x.final_sale_value??(status==="Accepted"?current:null),finalSaleValue:x.final_sale_value??null};
+      });
+      const remoteByRef=new Map(mapped.filter(x=>x.lotReference).map(x=>[x.lotReference,x]));
+      const localRefs=new Set();
+      requests=requests.map(local=>{const ref=local.lotReference;if(!ref||!remoteByRef.has(ref))return local;localRefs.add(ref);return {...local,...remoteByRef.get(ref),collector:local.collector||"Collector",collectorPhone:local.collectorPhone||remoteByRef.get(ref).collectorPhone};});
+      mapped.forEach(x=>{if(!localRefs.has(x.lotReference)&&!requests.some(r=>r.lotReference===x.lotReference))requests.push(x);});
+      requests.sort((a,b)=>Number(b.collectedAt?new Date(b.collectedAt).getTime():b.id||0)-Number(a.collectedAt?new Date(a.collectedAt).getTime():a.id||0));
+      await putState("sharedRequests",requests).catch(()=>{});
+      if(rerender&&location.hash==="#requests")render();
+    }catch(err){console.warn("Shared request refresh:",err);}
+    finally{sharedRefreshing=false;}
+  }
+  function startSharedPolling(){
+    if(sharedPoll)clearInterval(sharedPoll);
+    sharedPoll=setInterval(()=>{if(navigator.onLine&&user?.verified)loadSharedRequests({rerender:location.hash==="#requests"});},5000);
+  }
+
   async function loadMarketData({rerender=false,force=false}={}){
     try{
       if(!force){const cached=await getState("market").catch(()=>null);if(cached?.latest){marketLatest=Array.isArray(cached.latest)?cached.latest:[];marketTrends=Array.isArray(cached.trends)?cached.trends:[];}}
@@ -234,8 +264,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   async function acceptWorkflow(r){
     await syncBackendLot(r);
-    if(!r.recyclerExternalId)await chooseRecycler(r);
-    try{const data=await apiPost("transaction",{lotReference:r.lotReference,recyclerExternalId:r.recyclerExternalId||null,quotedPrice:r.currentOffer,finalPrice:r.currentOffer});r.transactionReference=data.transaction?.transaction_reference||r.transactionReference;}
+    if(role==="recycler"&&!r.recyclerExternalId)r.recyclerExternalId="ACCOUNT:"+accountId;
+    if(role!=="recycler"&&!r.recyclerExternalId)await chooseRecycler(r);
+    try{const data=await apiPost("transaction",{lotReference:r.lotReference,recyclerExternalId:r.recyclerExternalId||(role==="recycler"?"ACCOUNT:"+accountId:null),quotedPrice:r.currentOffer,finalPrice:r.currentOffer});r.transactionReference=data.transaction?.transaction_reference||r.transactionReference;}
     catch{if(!r.transactionReference)r.transactionReference="TX-"+Date.now().toString(36).toUpperCase();enqueue({id:"transaction:"+r.transactionReference,type:"transaction",data:{transaction_reference:r.transactionReference,lot_reference:r.lotReference,collector_phone:accountId,recycler_external_id:r.recyclerExternalId||null,quoted_price:r.currentOffer,final_price:r.currentOffer,payment_method:null,payment_status:"pending",status:"accepted",collection_address:r.address,collection_latitude:r.lat,collection_longitude:r.lng,collected_at:r.collectedAt||new Date().toISOString()}}).catch(()=>{});}
   }
   async function showMatches(r){
@@ -456,6 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function requestsScreen(){
     seedData(); normalizePricing();
+    loadSharedRequests({rerender:true});
     const own = role==="collector" ? requests.filter(r=>r.collectorPhone===accountId) : requests;
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("requests")+'</p><h1>'+tr("pickup")+'</h1></div></section><div class="request-list">'+(own.length?own.map(r=>{
       const latestBy=r.offers?.[r.offers.length-1]?.by;
@@ -487,13 +519,15 @@ document.addEventListener("DOMContentLoaded", () => {
     r.agreedPrice=Number(r.currentOffer); r.status="Accepted"; r.priceStatus="Agreed"; save(); render();
     await acceptWorkflow(r); save(); render();
   }
-  function counterOffer(id){
+  async function counterOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
     const input=document.querySelector('[data-counter="'+id+'"]'); const price=Number(input?.value);
     if(!Number.isFinite(price)||price<=0)return toast(tr("priceRequired"));
     const by=role==="collector"?"collector":"recycler";
     r.currentOffer=price; r.priceStatus=by==="collector"?tr("collectorOffer"):tr("recyclerOffer");
     r.offers=(r.offers||[]).concat({by,price,at:Date.now()});
+    try{await apiPost("offer",{lotReference:r.lotReference,price});}
+    catch{enqueue({id:"offer:"+r.lotReference+":"+role+":"+Date.now(),type:"offer",data:{lotReference:r.lotReference,price}}).catch(()=>{});}
     save(); render();
   }
 
@@ -691,5 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
   syncPending();
   loadMarketData();
   loadRecyclerData();
+  loadSharedRequests();
+  startSharedPolling();
   render();
 });
