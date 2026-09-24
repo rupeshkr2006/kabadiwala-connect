@@ -423,14 +423,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if(window.L)initMap("miniMap",true);
     document.getElementById("loc").onclick=getLocation;
     document.getElementById("mapPick").onclick=()=>enableMapPick("miniMap");
-    document.getElementById("setupForm").onsubmit=e=>{e.preventDefault();profile={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};if(isR){profile.business=document.getElementById("business").value;profile.materials=document.getElementById("materials").value;}save();go("dashboard");};
+    document.getElementById("setupForm").onsubmit=e=>{e.preventDefault();profile={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};if(isR){profile.business=document.getElementById("business").value;profile.materials=document.getElementById("materials").value;}save();sessionReady=false;ensureSession().catch(()=>{});loadRecyclerData({force:true});go("dashboard");};
   }
   function dashboard(){
     if(role==="collector") return collectorDash();
     return recyclerDash();
   }
   function collectorDash(){
-    seedData();
+    cleanDemoRequests();
     A.innerHTML=topbar()+'<main class="page"><section class="welcome"><div><p class="eyebrow">'+tr("collector")+'</p><h1>'+tr("hello")+', '+esc(profile?.name||"")+'</h1><p>'+tr("nearbyRecyclers")+'</p></div><button class="primary" id="list">＋ '+tr("listScrap")+'</button></section>'+
       '<section class="dash-grid"><div class="panel map-panel"><div class="panel-head"><div><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("collectorMap")+'</p></div><button class="icon-btn" id="dashLoc" aria-label="'+tr("useLocation")+'">⌖</button></div><div id="map" class="map"></div></div>'+
       '<div class="panel"><div class="panel-head"><div><h2>'+tr("recent")+'</h2><p>'+requests.length+' '+tr("requests")+'</p></div><button class="text-btn" data-p="requests">'+tr("view")+'</button></div><div class="mini-list">'+requests.slice(0,4).map(requestCard).join("")+'</div></div></section>'+
@@ -442,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("dashLoc").onclick=getLocation;
   }
   function recyclerDash(){
-    seedData();
+    cleanDemoRequests();
     A.innerHTML=topbar()+'<main class="page"><section class="welcome"><div><p class="eyebrow">'+tr("recycler")+'</p><h1>'+tr("hello")+', '+esc(profile?.name||profile?.business||"")+'</h1><p>'+tr("nearbyCollectors")+'</p></div><button class="secondary" id="rLoc">⌖ '+tr("useLocation")+'</button></section>'+
       '<section class="dash-grid"><div class="panel map-panel"><div class="panel-head"><div><h2>'+tr("nearbyCollectors")+'</h2><p>'+tr("recyclerMap")+'</p></div></div><div id="map" class="map"></div></div>'+
       '<div class="panel"><div class="panel-head"><div><h2>'+tr("items")+'</h2><p>'+requests.filter(x=>x.status!=="Completed").length+' '+tr("pending")+'</p></div><button class="text-btn" data-p="requests">'+tr("view")+'</button></div><div class="mini-list">'+requests.slice(0,4).map(requestCard).join("")+'</div></div></section>'+
@@ -488,12 +488,12 @@ document.addEventListener("DOMContentLoaded", () => {
     analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),lotReference:"LOT-"+Date.now().toString(36).toUpperCase(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,collectedAt:new Date().toISOString(),rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
-        collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
+        lotReference:r.lotReference,collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
         address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice
       }}).catch(()=>{});const file=photoInput.files?.[0];syncBackendLot(r).then(()=>uploadLotPhoto(r,file)).then(()=>{save();syncPending();});toast(tr("pickupCreated"));syncPending();go("requests");};
   }
   function requestsScreen(){
-    seedData(); normalizePricing();
+    cleanDemoRequests(); normalizePricing();
     loadSharedRequests({rerender:true});
     const own = role==="collector" ? requests.filter(r=>r.collectorPhone===accountId) : requests;
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("requests")+'</p><h1>'+tr("pickup")+'</h1></div></section><div class="request-list">'+(own.length?own.map(r=>{
