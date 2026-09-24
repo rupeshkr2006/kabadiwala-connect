@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let marketLatest = [];
   let marketTrends = [];
   let marketLoaded = false;
+  let recyclers = [];
+  let recyclersLoaded = false;
 
   const T = {
     en: {
@@ -98,6 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
   T.en.market="Market"; T.en.latestPrices="Latest reference prices"; T.en.history="Price history"; T.en.refreshMarket="Refresh market"; T.en.source="Source"; T.en.observed="Observed"; T.en.referenceData="Reference/demo data — verify before trading."; T.en.noMarket="No market observations available yet.";
   T.hi.market="बाजार"; T.hi.latestPrices="नवीन संदर्भ कीमतें"; T.hi.history="कीमत इतिहास"; T.hi.refreshMarket="बाजार अपडेट करें"; T.hi.source="स्रोत"; T.hi.observed="समय"; T.hi.referenceData="संदर्भ/डेमो डेटा — लेन-देन से पहले जांचें।"; T.hi.noMarket="अभी बाजार डेटा उपलब्ध नहीं है।";
   T.mr.market="बाजार"; T.mr.latestPrices="नवीन संदर्भ किंमती"; T.mr.history="किंमत इतिहास"; T.mr.refreshMarket="बाजार अपडेट करा"; T.mr.source="स्रोत"; T.mr.observed="वेळ"; T.mr.referenceData="संदर्भ/डेमो डेटा — व्यवहारापूर्वी तपासा."; T.mr.noMarket="अजून बाजार डेटा उपलब्ध नाही.";
+  T.en.recyclers="Recyclers"; T.en.authorized="Authorization"; T.en.pickupAvailable="Pickup"; T.en.serviceArea="Service area"; T.en.accepts="Accepts"; T.en.capacity="Capacity"; T.en.verifiedSource="Source record"; T.en.noRecyclers="No recycler records available yet.";
+  T.hi.recyclers="रीसायकलर"; T.hi.authorized="प्राधिकरण"; T.hi.pickupAvailable="पिकअप"; T.hi.serviceArea="सेवा क्षेत्र"; T.hi.accepts="स्वीकार करता है"; T.hi.capacity="क्षमता"; T.hi.verifiedSource="स्रोत रिकॉर्ड"; T.hi.noRecyclers="अभी रीसायकलर रिकॉर्ड उपलब्ध नहीं हैं।";
+  T.mr.recyclers="रिसायकलर"; T.mr.authorized="परवानगी"; T.mr.pickupAvailable="पिकअप"; T.mr.serviceArea="सेवा क्षेत्र"; T.mr.accepts="स्वीकारते"; T.mr.capacity="क्षमता"; T.mr.verifiedSource="स्रोत नोंद"; T.mr.noRecyclers="अजून रिसायकलर नोंदी उपलब्ध नाहीत.";
   const tr = k => (T[lang] && T[lang][k]) || T.en[k] || k;
   const PRICE_PER_KG = {
     plastic: 25, paper: 12, cardboard: 10, metal: 40, iron: 30,
@@ -140,6 +145,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function pricePanel(r,showInput=false){
     return '<div class="price-box"><div><span>Indicative</span><b>'+money(r.indicativeTotal)+'</b><small>'+money(r.rate)+' / kg</small></div><div><span>Current offer</span><b>'+offerLabel(r)+'</b><small>'+esc(r.priceStatus||"")+'</small></div>'+(showInput?'<label class="offer-input"><span>Counter offer</span><input data-offer-input="'+r.id+'" type="number" min="1" step="1" value="'+esc(r.currentOffer||r.askingPrice||r.indicativeTotal)+'" inputmode="numeric"></label>':'')+'</div>';
+  }
+
+  async function loadRecyclerData({rerender=false,force=false}={}){
+    try{
+      if(!force){const cached=await getState("recyclers").catch(()=>null);if(Array.isArray(cached))recyclers=cached;}
+      if(!navigator.onLine)return;
+      const res=await fetch("/api/recyclers",{cache:"no-store"});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Recycler data unavailable");
+      recyclers=Array.isArray(data.recyclers)?data.recyclers:[];await putState("recyclers",recyclers).catch(()=>{});
+      if(rerender && location.hash==="#recyclers")render();
+    }catch(err){console.warn("Recycler directory:",err);}
+  }
+  function recyclerScreen(){
+    const rows=recyclers||[];
+    const cards=rows.length?'<div class="recycler-grid">'+rows.map(x=>'<article class="panel recycler-card"><div class="recycler-head"><div><h2>'+esc(x.facility_name||"Recycler")+'</h2><p>'+esc(x.city||x.district||"Andhra Pradesh")+'</p></div><span class="status accepted">'+esc(x.authorization_status||"Record")+'</span></div><p class="recycler-address">'+esc(x.address||"")+'</p><div class="recycler-chips"><span>'+tr("accepts")+': '+esc((x.materials_accepted||[]).join(", "))+'</span><span>'+tr("pickupAvailable")+': '+(x.pickup_available?"Yes":"No")+'</span><span>'+tr("serviceArea")+': '+esc(x.service_area_km?x.service_area_km+" km":"—")+'</span></div><p class="market-meta">'+tr("verifiedSource")+': '+esc(x.authorization_source||"—")+'</p></article>').join("")+'</div>':'<div class="empty panel">'+tr("noRecyclers")+'</div>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("recyclers")+'</p><h1>'+tr("nearbyRecyclers")+'</h1><p>Directory records are shown with their source and authorization status.</p></div><button class="secondary" id="refreshRecyclers">↻ '+tr("recyclers")+'</button></section>'+cards+'</main>';
+    bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}
   }
 
   async function loadMarketData({rerender=false,force=false}={}){
@@ -216,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="market">₹ Market</button><button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
+      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button><button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
@@ -569,6 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(h==="list")return listScreen();
     if(h==="requests")return requestsScreen();
     if(h==="market")return marketScreen();
+    if(h==="recyclers")return recyclerScreen();
     if(h==="safety")return safetyScreen();
     if(h==="profile")return profileScreen();
     dashboard();
@@ -578,5 +600,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateNetworkStatus();
   syncPending();
   loadMarketData();
+  loadRecyclerData();
   render();
 });
