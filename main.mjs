@@ -1,4 +1,4 @@
-import { putState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
 
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let profile = JSON.parse(localStorage.kcProfile || "null");
   let recognition = null;
   let maps = {};
+  let marketLatest = [];
+  let marketTrends = [];
+  let marketLoaded = false;
 
   const T = {
     en: {
@@ -91,6 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
   };
+
+  T.en.market="Market"; T.en.latestPrices="Latest reference prices"; T.en.history="Price history"; T.en.refreshMarket="Refresh market"; T.en.source="Source"; T.en.observed="Observed"; T.en.referenceData="Reference/demo data — verify before trading."; T.en.noMarket="No market observations available yet.";
+  T.hi.market="बाजार"; T.hi.latestPrices="नवीन संदर्भ कीमतें"; T.hi.history="कीमत इतिहास"; T.hi.refreshMarket="बाजार अपडेट करें"; T.hi.source="स्रोत"; T.hi.observed="समय"; T.hi.referenceData="संदर्भ/डेमो डेटा — लेन-देन से पहले जांचें।"; T.hi.noMarket="अभी बाजार डेटा उपलब्ध नहीं है।";
+  T.mr.market="बाजार"; T.mr.latestPrices="नवीन संदर्भ किंमती"; T.mr.history="किंमत इतिहास"; T.mr.refreshMarket="बाजार अपडेट करा"; T.mr.source="स्रोत"; T.mr.observed="वेळ"; T.mr.referenceData="संदर्भ/डेमो डेटा — व्यवहारापूर्वी तपासा."; T.mr.noMarket="अजून बाजार डेटा उपलब्ध नाही.";
   const tr = k => (T[lang] && T[lang][k]) || T.en[k] || k;
   const PRICE_PER_KG = {
     plastic: 25, paper: 12, cardboard: 10, metal: 40, iron: 30,
@@ -108,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const n=parseFloat(m[1].replace(",",".")); const u=(m[2]||"kg").toLowerCase();
     return /^(g|gram|grams|ग्रॅम|ग्राम)$/.test(u) ? n/1000 : n;
   };
-  const rateFor = category => PRICE_PER_KG[categoryKey(category)] || 20;
+  const rateFor = category => { const key=categoryKey(category), normalized=key.replace(/-s$/,""); const live=marketLatest.find(x=>{const n=categoryKey(x.material_name).replace(/-s$/,""); return n===normalized || n.includes(normalized) || normalized.includes(n);}); return Number(live?.buying_price)||PRICE_PER_KG[key]||20; };
   const minRateFor = category => MIN_PRICE_PER_KG[categoryKey(category)] || Math.max(15,Math.round(rateFor(category)*0.8));
   const indicativeFor = (category,weight) => Math.round(rateFor(category)*weightKg(weight));
   const minimumFor = (category,weight) => Math.round(minRateFor(category)*weightKg(weight));
@@ -133,6 +140,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function pricePanel(r,showInput=false){
     return '<div class="price-box"><div><span>Indicative</span><b>'+money(r.indicativeTotal)+'</b><small>'+money(r.rate)+' / kg</small></div><div><span>Current offer</span><b>'+offerLabel(r)+'</b><small>'+esc(r.priceStatus||"")+'</small></div>'+(showInput?'<label class="offer-input"><span>Counter offer</span><input data-offer-input="'+r.id+'" type="number" min="1" step="1" value="'+esc(r.currentOffer||r.askingPrice||r.indicativeTotal)+'" inputmode="numeric"></label>':'')+'</div>';
+  }
+
+  async function loadMarketData({rerender=false,force=false}={}){
+    try{
+      if(!force){const cached=await getState("market").catch(()=>null);if(cached?.latest){marketLatest=Array.isArray(cached.latest)?cached.latest:[];marketTrends=Array.isArray(cached.trends)?cached.trends:[];}}
+      if(!navigator.onLine)return;
+      const res=await fetch("/api/market?days=30",{cache:"no-store"}); const data=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(data.error||"Market data unavailable");
+      marketLatest=Array.isArray(data.latest)?data.latest:[]; marketTrends=Array.isArray(data.trends)?data.trends:[];
+      await putState("market",{latest:marketLatest,trends:marketTrends,updatedAt:Date.now()}).catch(()=>{});
+      if(rerender && location.hash==="#market")render();
+    }catch(err){console.warn("Market data:",err);}
+  }
+  function formatDate(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString(lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN",{day:"2-digit",month:"short",year:"numeric"});}
+  function marketScreen(){
+    const latest=marketLatest||[], trendRows=marketTrends||[];
+    const latestHtml=latest.length?'<div class="market-grid">'+latest.map(x=>'<article class="panel market-card"><div class="market-name">'+esc(x.material_name||"Material")+'</div><div class="market-price">'+money(x.buying_price)+'<small>/ '+esc(x.unit||"kg")+'</small></div><div class="market-range">'+money(x.market_min)+' – '+money(x.market_max)+' / '+esc(x.unit||"kg")+'</div><div class="market-meta">'+tr("source")+': '+esc(x.source||"—")+'</div><div class="market-meta">'+tr("observed")+': '+esc(formatDate(x.observed_at))+'</div></article>').join("")+'</div>':'<div class="empty panel">'+tr("noMarket")+'</div>';
+    const grouped={}; trendRows.forEach(x=>{const k=x.material_name||"Material";(grouped[k] ||= []).push(x);});
+    const trendHtml=Object.entries(grouped).map(([name,rows])=>{const ordered=rows.slice().sort((a,b)=>String(a.price_day).localeCompare(String(b.price_day)));const vals=ordered.map(x=>Number(x.avg_buying_price)||0);const max=Math.max(...vals,1);return '<article class="panel trend-card"><div class="panel-head"><div><h2>'+esc(name)+'</h2><p>'+ordered.length+' observation'+(ordered.length===1?"":"s")+'</p></div><strong>'+money(vals[vals.length-1])+'/kg</strong></div><div class="trend-bars">'+ordered.slice(-14).map(x=>'<span style="height:'+Math.max(8,Math.round(((Number(x.avg_buying_price)||0)/max)*100))+'%" title="'+esc(formatDate(x.price_day))+': '+money(x.avg_buying_price)+'"></span>').join("")+'</div></article>';}).join("")||'<div class="empty panel">'+tr("noMarket")+'</div>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("market")+'</p><h1>'+tr("latestPrices")+'</h1><p>'+tr("referenceData")+'</p></div><button class="secondary" id="refreshMarket">↻ '+tr("refreshMarket")+'</button></section>'+latestHtml+'<section class="section-title market-section-title"><div><h1>'+tr("history")+'</h1><p>Observed records from the marketplace dataset.</p></div></section><div class="trend-grid">'+trendHtml+'</div></main>';
+    bindShell();document.getElementById("refreshMarket").onclick=()=>loadMarketData({rerender:true,force:true});if(!marketLoaded){marketLoaded=true;loadMarketData({rerender:true,force:true});}
   }
 
   const save = () => {
@@ -188,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
+      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="market">₹ Market</button><button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
@@ -540,6 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(h==="setup")return setupScreen();
     if(h==="list")return listScreen();
     if(h==="requests")return requestsScreen();
+    if(h==="market")return marketScreen();
     if(h==="safety")return safetyScreen();
     if(h==="profile")return profileScreen();
     dashboard();
@@ -548,5 +577,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if(!location.hash)location.hash=user?.verified?(role?"dashboard":"role"):"login";
   updateNetworkStatus();
   syncPending();
+  loadMarketData();
   render();
 });
