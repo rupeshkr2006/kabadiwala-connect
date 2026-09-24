@@ -5,6 +5,17 @@ export default async function handler(req,res){
     const target=String(req.query?.file||"main");
     const p=target==="public"?path.join(process.cwd(),"public","main.mjs"):path.join(process.cwd(),"main.mjs");
     const source=fs.readFileSync(p,"utf8").replace(/^import[^;]+;\s*/,"");
+    if(String(req.query?.mode||"")==="import"){
+      const callbacks=[];
+      globalThis.document={addEventListener(name,fn){if(name==="DOMContentLoaded")callbacks.push(fn);},getElementById(){return null;}};
+      globalThis.window={addEventListener(){},removeEventListener(){},location:{hash:""}};
+      globalThis.navigator={onLine:true};
+      globalThis.localStorage={getItem(){return null},setItem(){},removeItem(){}};
+      globalThis.sessionStorage=globalThis.localStorage;
+      globalThis.location={hash:""};
+      await import("file://"+p+"?diag="+Date.now());
+      return res.status(200).json({ok:true,stage:"import"});
+    }
     if(String(req.query?.mode||"")==="runtime"){
       const callbacks=[];
       const elements=new Map();
