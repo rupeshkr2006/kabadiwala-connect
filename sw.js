@@ -6,7 +6,7 @@ const APP_SHELL = [
   "/styles.css",
   "/favicon.svg",
   "/offline-db.mjs",
-  "/manifest.webmanifest",
+  "/manifest.webmanifest", "/admin.html",
   "/models/labels.json",
   "/models/ewaste_mobilenetv2_fp16.tflite",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js",
