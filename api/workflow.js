@@ -3,7 +3,7 @@ import { getSession } from "./session.js";
 
 const supabase=()=>{
   const url=String(process.env.SUPABASE_URL||"").replace(/\/$/,"");
-  const key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+  const key=String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
   if(!url||!key)throw new Error("Supabase backend is not configured.");
   return {url,key,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"}};
 };
@@ -32,6 +32,26 @@ export default async function handler(req,res){
   const session=requireSession(req,res);if(!session)return;
   const action=String(req.query?.action||"");
   try{
+    if(req.method==="GET"&&action==="lots"){
+      const isCollector=session.role==="collector";
+      const filter=isCollector?"?collector_phone=eq."+encodeURIComponent(session.phone):"?status=in.(pending,accepted,handed_over,completed)";
+      const rows=await rest("/rest/v1/platform_lots"+filter+"&select=lot_reference,collector_phone,material_category,sub_category,condition,approximate_weight_kg,image_url,source_type,collection_address,collection_latitude,collection_longitude,estimated_value,quoted_value,final_sale_value,status,notes,collected_at,handed_over_at&order=created_at.desc&limit=100");
+      const refs=rows.map(x=>x.lot_reference).filter(Boolean);
+      let offers=[],txs=[];
+      if(refs.length){
+        const inList="("+refs.map(x=>encodeURIComponent(x)).join(",")+")";
+        offers=await rest("/rest/v1/platform_offers?lot_reference=in."+inList+"&select=lot_reference,actor_role,actor_ref,price,created_at&order=created_at.asc").catch(()=>[]);
+        txs=await rest("/rest/v1/platform_transactions?lot_reference=in."+inList+"&select=lot_reference,transaction_reference,recycler_external_id,quoted_price,final_price,payment_status,status").catch(()=>[]);
+      }
+      const byOffer={};offers.forEach(o=>(byOffer[o.lot_reference] ||= []).push(o));
+      const byTx={};txs.forEach(t=>{byTx[t.lot_reference]=t;});
+      const publicRows=rows.map(x=>{
+        const o=byOffer[x.lot_reference]||[],t=byTx[x.lot_reference]||null;
+        const latest=o[o.length-1]||null;
+        return {...x,offers:o,latest_offer_price:latest?.price??x.quoted_value??null,latest_offer_role:latest?.actor_role??"collector",recycler_external_id:t?.recycler_external_id||null,transaction_reference:t?.transaction_reference||null};
+      });
+      return res.status(200).json({rows:publicRows});
+    }
     if(req.method==="GET"&&action==="ledger"){
       const rows=await rest("/rest/v1/platform_earnings?collector_phone=eq."+encodeURIComponent(session.phone)+"&select=*&order=created_at.desc");
       const total=rows.reduce((a,x)=>a+Number(x.amount||0),0),paid=rows.filter(x=>x.status==="paid").reduce((a,x)=>a+Number(x.amount||0),0),pending=total-paid;
@@ -69,13 +89,25 @@ export default async function handler(req,res){
       await rest("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({image_url:url,source_photo_count:1})});
       return res.status(200).json({image_url:url});
     }
+    if(req.method==="POST"&&action==="offer"){
+      const p=req.body||{},lotReference=String(p.lotReference||""),price=Number(p.price||0);
+      if(!lotReference||!Number.isFinite(price)||price<=0)throw new Error("Valid lot and offer price required.");
+      const lots=await rest("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference)+"&select=lot_reference,collector_phone,status");
+      const lot=lots[0];if(!lot)throw new Error("Lot not found.");
+      if(session.role==="collector"&&lot.collector_phone!==session.phone)throw new Error("Lot ownership check failed.");
+      if(lot.status!=="pending")throw new Error("Only pending lots can be negotiated.");
+      const actorRef=session.role==="recycler"?"ACCOUNT:"+session.phone:session.phone;
+      await rest("/rest/v1/platform_offers",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify({lot_reference:lotReference,actor_role:session.role,actor_ref:actorRef,price})});
+      await rest("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({quoted_value:price})});
+      return res.status(200).json({ok:true,offer:{lot_reference:lotReference,actor_role:session.role,actor_ref:actorRef,price}});
+    }
     if(req.method==="POST"&&action==="transaction"){
       const p=req.body||{},lotReference=String(p.lotReference||"");if(!lotReference)throw new Error("Lot reference required.");
       const lots=await rest("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference)+"&select=*");
       const lot=lots[0];if(!lot)throw new Error("Lot not found.");
       if(session.role==="collector"&&lot.collector_phone!==session.phone)throw new Error("Lot ownership check failed.");
       const txRef=String(p.transactionReference||ref("TX"));
-      const body={transaction_reference:txRef,lot_reference:lotReference,collector_phone:lot.collector_phone,recycler_external_id:p.recyclerExternalId||null,quoted_price:p.quotedPrice??lot.quoted_value??null,final_price:p.finalPrice??p.quotedPrice??lot.quoted_value??null,payment_method:p.paymentMethod||null,payment_status:"pending",status:"accepted",collection_address:lot.collection_address,collection_latitude:lot.collection_latitude,collection_longitude:lot.collection_longitude,collected_at:lot.collected_at};
+      const body={transaction_reference:txRef,lot_reference:lotReference,collector_phone:lot.collector_phone,recycler_external_id:p.recyclerExternalId||("ACCOUNT:"+session.phone),quoted_price:p.quotedPrice??lot.quoted_value??null,final_price:p.finalPrice??p.quotedPrice??lot.quoted_value??null,payment_method:p.paymentMethod||null,payment_status:"pending",status:"accepted",collection_address:lot.collection_address,collection_latitude:lot.collection_latitude,collection_longitude:lot.collection_longitude,collected_at:lot.collected_at};
       const rows=await rest("/rest/v1/platform_transactions?on_conflict=transaction_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)});
       await rest("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(lotReference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:"accepted",quoted_value:body.quoted_price})});
       return res.status(200).json({transaction:rows?.[0]||body});
