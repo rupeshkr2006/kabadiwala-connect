@@ -295,8 +295,25 @@ document.addEventListener("DOMContentLoaded", () => {
     try{await apiPost("payment",{transactionReference:r.transactionReference,amount,method});r.agreedPrice=amount;r.status="Completed";r.finalSaleValue=amount;r.paymentStatus="paid";save();render();toast(tr("paidSuccess"));}catch{enqueue({id:"payment:"+r.transactionReference,type:"payment",data:{transaction_reference:r.transactionReference,amount,status:"paid",payment_method:method,payment_reference:null,paid_at:new Date().toISOString()}}).catch(()=>{});r.agreedPrice=amount;r.status="Completed";save();render();toast("Saved offline");}
   }
   async function earningsScreen(){
-    let data={rows:[],total:0,paid:0,pending:0};try{data=await apiGet("ledger");}catch{}
-    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(data.total)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(data.paid)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(data.pending)+'</strong></section></div><section class="panel ledger-list">'+(data.rows?.length?data.rows.map(x=>'<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference)+'</span></div><div><span>'+esc(x.payment_method||"—")+'</span><span>'+esc(x.status)+'</span></div></div>').join(""):'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';bindShell();
+    let data={rows:[],total:0,paid:0,pending:0};
+    try{data=await apiGet("ledger");}
+    catch{
+      const localPaid=requests.filter(r=>r.status==="Completed"&&Number(r.finalSaleValue||r.agreedPrice||0)>0)
+        .map(r=>({amount:Number(r.finalSaleValue||r.agreedPrice),transaction_reference:r.transactionReference||r.lotReference,payment_method:r.paymentMethod||"cash",status:"paid",paid_at:r.paidAt||r.completedAt||r.collectedAt}));
+      const localPending=requests.filter(r=>!["Completed","Cancelled"].includes(String(r.status))&&Number(r.agreedPrice||r.currentOffer||r.expectedPrice||0)>0)
+        .map(r=>({amount:Number(r.agreedPrice||r.currentOffer||r.expectedPrice),transaction_reference:r.transactionReference||r.lotReference,payment_method:"—",status:"pending"}));
+      const rows=[...localPaid,...localPending];
+      const paid=localPaid.reduce((a,x)=>a+Number(x.amount||0),0),pending=localPending.reduce((a,x)=>a+Number(x.amount||0),0);
+      data={rows,total:paid+pending,paid,pending};
+    }
+    const fmtDate=v=>v?new Date(v).toLocaleString():"—";
+    const cards=(data.rows||[]).map(x=>{
+      const isPaid=String(x.status).toLowerCase()==="paid";
+      return '<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference||"—")+'</span><span>'+fmtDate(x.paid_at||x.created_at)+'</span></div><div class="ledger-meta"><span class="ledger-badge '+(isPaid?"paid":"pending")+'">'+(isPaid?tr("paid"):tr("pendingAmount"))+'</span><span>'+esc(x.payment_method||"—")+'</span></div></div>';
+    }).join("");
+    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div><button class="secondary" id="refreshEarnings">↻ '+tr("refreshMarket")+'</button></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(data.total||0)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(data.paid||0)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(data.pending||0)+'</strong></section></div><section class="panel ledger-list">'+(cards||'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';
+    bindShell();
+    const refresh=document.getElementById("refreshEarnings");if(refresh)refresh.onclick=()=>render();
   }
 
   const save = () => {
@@ -871,6 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(h==="recyclers")return recyclerScreen();
     if(h==="safety")return safetyScreen();
     if(h==="profile")return profileScreen();
+    if(h==="earnings"&&role==="collector")return earningsScreen();
     dashboard();
   }
   window.addEventListener("hashchange",render);
