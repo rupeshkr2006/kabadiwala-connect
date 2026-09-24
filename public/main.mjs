@@ -171,11 +171,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function recyclerScreen(){
     const rows=recyclers||[];
-    const cards=rows.length?'<div class="recycler-grid">'+rows.map(x=>'<article class="panel recycler-card"><div class="recycler-head"><div><h2>'+esc(x.facility_name||"Recycler")+'</h2><p>'+esc(x.city||x.district||"Andhra Pradesh")+'</p></div><span class="status accepted">'+esc(x.authorization_status||"Record")+'</span></div><p class="recycler-address">'+esc(x.address||"")+'</p><div class="recycler-chips"><span>'+tr("accepts")+': '+esc((x.materials_accepted||[]).join(", "))+'</span><span>'+tr("pickupAvailable")+': '+(x.pickup_available?"Yes":"No")+'</span><span>'+tr("serviceArea")+': '+esc(x.service_area_km?x.service_area_km+" km":"—")+'</span></div><p class="market-meta">'+tr("verifiedSource")+': '+esc(x.authorization_source||"—")+'</p></article>').join("")+'</div>':'<div class="empty panel">'+tr("noRecyclers")+'</div>';
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("recyclers")+'</p><h1>'+tr("nearbyRecyclers")+'</h1><p>Directory records are shown with their source and authorization status.</p></div><button class="secondary" id="refreshRecyclers">↻ '+tr("recyclers")+'</button></section>'+cards+'</main>';
+    const cards=rows.length?'<div class="recycler-grid">'+rows.map(x=>{
+      const verified=!!x.verification_badge||String(x.verification_status||"").toLowerCase()==="verified";
+      return '<article class="panel recycler-card"><div class="recycler-head"><div><h2>'+esc(x.facility_name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>'+esc(x.city||x.district||"Andhra Pradesh")+'</p></div><span class="status accepted">'+(verified?tr("verified"):tr("notVerified"))+'</span></div><p class="recycler-address">'+esc(x.address||"")+'</p><div class="recycler-chips"><span>'+tr("accepts")+': '+esc((x.materials_accepted||[]).join(", "))+'</span><span>'+tr("pickupAvailable")+': '+(x.pickup_available?"Yes":"No")+'</span><span>'+tr("serviceArea")+': '+esc(x.service_area_km?x.service_area_km+" km":"—")+'</span></div><p class="market-meta">'+tr("verifiedSource")+': '+esc(x.authorization_source||"—")+'</p></article>';
+    }).join("")+'</div>':'<div class="empty panel">'+tr("noRecyclers")+'</div>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("recyclers")+'</p><h1>'+tr("nearbyRecyclers")+'</h1><p>★ '+tr("verified")+' · '+tr("notVerified")+'</p></div><button class="secondary" id="refreshRecyclers">↻ '+tr("refresh")+'</button></section>'+cards+'</main>';
     bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}
   }
-
   async function loadSharedRequests({rerender=false}={}){
     if(sharedRefreshing||!navigator.onLine||!user?.verified)return;
     sharedRefreshing=true;
@@ -225,9 +227,58 @@ document.addEventListener("DOMContentLoaded", () => {
     bindShell();document.getElementById("refreshMarket").onclick=()=>loadMarketData({rerender:true,force:true});if(!marketLoaded){marketLoaded=true;loadMarketData({rerender:true,force:true});}
   }
 
+  T.en.admin="Admin"; T.en.adminPanel="Admin panel"; T.en.verifyRecyclers="Recycler verification"; T.en.verified="Verified"; T.en.notVerified="Not verified"; T.en.verify="Verify"; T.en.reject="Reject"; T.en.suspend="Suspend"; T.en.documents="Documents"; T.en.documentRequired="Relevant documents"; T.en.viewDocument="View document"; T.en.noDocuments="No documents uploaded."; T.en.refresh="Refresh"; T.en.summary="Overview"; T.en.allData="All platform data"; T.en.collectors="Collectors"; T.en.recyclers="Recyclers"; T.en.lots="Requests / lots"; T.en.offers="Offers"; T.en.transactions="Transactions"; T.en.handovers="Handovers"; T.en.earnings="Earnings"; T.en.pendingVerification="Pending verification"; T.en.verifiedRecyclers="Verified recyclers"; T.en.registrationNumber="Registration number"; T.en.gstNumber="GST number"; T.en.authorizationNumber="E-waste authorization number"; T.en.authorizationType="Authorization type"; T.en.authorizationExpiry="Authorization expiry"; T.en.contactEmail="Contact email"; T.en.facilityAddress="Facility address"; T.en.pickupAvailable="Pickup available"; T.en.serviceArea="Service area"; T.en.offeredRateNotes="Rate / offer notes"; T.en.upload="Upload"; T.en.saveProfile="Save recycler details"; T.en.reverification="Any profile/document change sends the recycler back to pending verification.";
+  T.hi.admin="एडमिन"; T.hi.adminPanel="एडमिन पैनल"; T.hi.verifyRecyclers="रीसायकलर सत्यापन"; T.hi.verified="सत्यापित"; T.hi.notVerified="सत्यापित नहीं"; T.hi.verify="सत्यापित करें"; T.hi.reject="अस्वीकार"; T.hi.suspend="निलंबित"; T.hi.documents="दस्तावेज़"; T.hi.documentRequired="जरूरी दस्तावेज़"; T.hi.viewDocument="दस्तावेज़ देखें"; T.hi.noDocuments="कोई दस्तावेज़ अपलोड नहीं है।"; T.hi.refresh="रिफ्रेश"; T.hi.summary="अवलोकन"; T.hi.allData="सभी प्लेटफॉर्म डेटा"; T.hi.collectors="कलेक्टर"; T.hi.recyclers="रीसायकलर"; T.hi.lots="रिक्वेस्ट / लॉट"; T.hi.offers="ऑफर"; T.hi.transactions="लेन-देन"; T.hi.handovers="हैंडओवर"; T.hi.earnings="कमाई"; T.hi.pendingVerification="सत्यापन लंबित"; T.hi.verifiedRecyclers="सत्यापित रीसायकलर"; T.hi.registrationNumber="रजिस्ट्रेशन नंबर"; T.hi.gstNumber="GST नंबर"; T.hi.authorizationNumber="ई-वेस्ट अनुमति नंबर"; T.hi.authorizationType="अनुमति प्रकार"; T.hi.authorizationExpiry="अनुमति समाप्ति"; T.hi.contactEmail="ईमेल"; T.hi.facilityAddress="फैसिलिटी पता"; T.hi.pickupAvailable="पिकअप उपलब्ध"; T.hi.serviceArea="सेवा क्षेत्र"; T.hi.offeredRateNotes="रेट / ऑफर नोट्स"; T.hi.upload="अपलोड"; T.hi.saveProfile="रीसायकलर विवरण सेव करें"; T.hi.reverification="प्रोफ़ाइल/दस्तावेज़ बदलने पर फिर से सत्यापन जरूरी होगा।";
+  T.mr.admin="अॅडमिन"; T.mr.adminPanel="अॅडमिन पॅनेल"; T.mr.verifyRecyclers="रिसायकलर पडताळणी"; T.mr.verified="पडताळलेले"; T.mr.notVerified="पडताळलेले नाही"; T.mr.verify="पडताळा"; T.mr.reject="नकार"; T.mr.suspend="निलंबित"; T.mr.documents="कागदपत्रे"; T.mr.documentRequired="आवश्यक कागदपत्रे"; T.mr.viewDocument="कागदपत्र पहा"; T.mr.noDocuments="कागदपत्रे अपलोड केलेली नाहीत."; T.mr.refresh="रिफ्रेश"; T.mr.summary="आढावा"; T.mr.allData="सर्व प्लॅटफॉर्म डेटा"; T.mr.collectors="कलेक्टर"; T.mr.recyclers="रिसायकलर"; T.mr.lots="विनंत्या / लॉट"; T.mr.offers="ऑफर"; T.mr.transactions="व्यवहार"; T.mr.handovers="हँडओव्हर"; T.mr.earnings="कमाई"; T.mr.pendingVerification="पडताळणी प्रलंबित"; T.mr.verifiedRecyclers="पडताळलेले रिसायकलर"; T.mr.registrationNumber="नोंदणी क्रमांक"; T.mr.gstNumber="GST क्रमांक"; T.mr.authorizationNumber="ई-वेस्ट परवानगी क्रमांक"; T.mr.authorizationType="परवानगी प्रकार"; T.mr.authorizationExpiry="परवानगी समाप्ती"; T.mr.contactEmail="ईमेल"; T.mr.facilityAddress="फॅसिलिटी पत्ता"; T.mr.pickupAvailable="पिकअप उपलब्ध"; T.mr.serviceArea="सेवा क्षेत्र"; T.mr.offeredRateNotes="रेट / ऑफर नोट्स"; T.mr.upload="अपलोड"; T.mr.saveProfile="रिसायकलर माहिती सेव्ह करा"; T.mr.reverification="प्रोफाइल/कागदपत्र बदलल्यावर पुन्हा पडताळणी आवश्यक.";
   T.en.matchRecycler="Find recyclers"; T.en.recommended="Recommended recyclers"; T.en.select="Select"; T.en.confirmHandover="Confirm handover"; T.en.payment="Record payment"; T.en.earnings="Earnings"; T.en.totalEarned="Total earned"; T.en.paid="Paid"; T.en.pendingAmount="Pending"; T.en.noEarnings="No earnings yet."; T.en.workflowNote="Handover requires confirmation from both sides."; T.en.paidSuccess="Payment recorded";
   T.hi.matchRecycler="रीसायकलर खोजें"; T.hi.recommended="सुझाए गए रीसायकलर"; T.hi.select="चुनें"; T.hi.confirmHandover="हैंडओवर की पुष्टि करें"; T.hi.payment="भुगतान दर्ज करें"; T.hi.earnings="कमाई"; T.hi.totalEarned="कुल कमाई"; T.hi.paid="भुगतान हुआ"; T.hi.pendingAmount="पेंडिंग"; T.hi.noEarnings="अभी कोई कमाई नहीं।"; T.hi.workflowNote="हैंडओवर के लिए दोनों पक्षों की पुष्टि जरूरी है।"; T.hi.paidSuccess="भुगतान दर्ज हुआ";
   T.mr.matchRecycler="रिसायकलर शोधा"; T.mr.recommended="सुचवलेले रिसायकलर"; T.mr.select="निवडा"; T.mr.confirmHandover="हँडओव्हरची पुष्टी करा"; T.mr.payment="पेमेंट नोंदवा"; T.mr.earnings="कमाई"; T.mr.totalEarned="एकूण कमाई"; T.mr.paid="पेड"; T.mr.pendingAmount="प्रलंबित"; T.mr.noEarnings="अजून कमाई नाही."; T.mr.workflowNote="हँडओव्हरसाठी दोन्ही बाजूंची पुष्टी आवश्यक आहे."; T.mr.paidSuccess="पेमेंट नोंदले";
+
+  async function saveRecyclerProfileRemote(){
+    if(role!=="recycler")return null;
+    const payload={
+      name:profile?.name,business_name:profile?.business,preferred_language:lang,
+      general_location:profile?.area,facility_address:profile?.facilityAddress||profile?.area,
+      accepted_materials:String(profile?.materials||"").split(",").map(x=>x.trim()).filter(Boolean),
+      pickup_radius_km:Number(String(profile?.radius||"5").match(/\d+/)?.[0]||5),
+      latitude:pos?.lat??null,longitude:pos?.lng??null,
+      pickup_available:profile?.pickupAvailable!==false,service_area:profile?.serviceArea,
+      registration_number:profile?.registrationNumber,gst_number:profile?.gstNumber,
+      authorization_number:profile?.authorizationNumber,authorization_type:profile?.authorizationType,
+      authorization_expiry:profile?.authorizationExpiry||null,contact_email:profile?.contactEmail,
+      offered_rate_notes:profile?.offeredRateNotes
+    };
+    const res=await fetch("/api/recycler-profile?action=save",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(payload)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||"Could not save recycler profile.");
+    if(data.profile){
+      profile={...profile,business:data.profile.business_name||profile.business,name:data.profile.name||profile.name,
+        area:data.profile.general_location||profile.area,materials:Array.isArray(data.profile.accepted_materials)?data.profile.accepted_materials.join(", "):profile.materials,
+        verificationStatus:data.profile.verification_status,verificationBadge:!!data.profile.verification_badge,
+        documents:data.profile.recycler_documents||profile.documents||[]};
+      save();
+    }
+    return data.profile||null;
+  }
+
+  async function loadRecyclerProfileRemote(){
+    if(role!=="recycler"||!navigator.onLine)return;
+    try{
+      await ensureSession();
+      const res=await fetch("/api/recycler-profile",{credentials:"same-origin",cache:"no-store"});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||!data.profile)return;
+      const p=data.profile;
+      profile={...profile,name:p.name||profile?.name,business:p.business_name||profile?.business,area:p.general_location||profile?.area,
+        facilityAddress:p.facility_address||profile?.facilityAddress,materials:Array.isArray(p.accepted_materials)?p.accepted_materials.join(", "):profile?.materials,
+        radius:(p.pickup_radius_km||5)+" km",registrationNumber:p.registration_number||"",gstNumber:p.gst_number||"",
+        authorizationNumber:p.authorization_number||"",authorizationType:p.authorization_type||"",authorizationExpiry:p.authorization_expiry||"",
+        contactEmail:p.contact_email||"",pickupAvailable:p.pickup_available!==false,serviceArea:p.service_area||"",
+        offeredRateNotes:p.offered_rate_notes||"",verificationStatus:p.verification_status||"pending",verificationBadge:!!p.verification_badge,documents:p.recycler_documents||[]};
+      save();
+      if(location.hash==="#setup"||location.hash==="#profile")render();
+    }catch(err){console.warn("Recycler profile refresh:",err);}
+  }
 
   async function ensureSession(){
     if(sessionReady)return true;
@@ -387,9 +438,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if(requests.length!==before)localStorage.requests=JSON.stringify(requests);
   }
   function topbar(){
-    return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button>'+(role==="collector"?'<button data-p="earnings">₹ '+tr("earnings")+'</button>':'')+'<button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
-      '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
+    const adminNav=role==="admin"?'<button data-p="admin">🛡 '+tr("admin")+'</button>':'';
+    const userNav=role==="admin"?'':'<button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button>'+(role==="collector"?'<button data-p="earnings">₹ '+tr("earnings")+'</button>':'')+'<button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button>';
+    return '<header class="top"><a class="brand" href="'+(role==="admin"?"#admin":"#dashboard")+'" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav"><span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="'+(role==="admin"?"admin":"dashboard")+'">'+(role==="admin"?tr("admin"):tr("dashboardNav"))+'</button>'+adminNav+userNav+'<button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Admin")+'</button><select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
     const s=A.querySelector(".lang"); if(s){s.value=lang;s.onchange=e=>{lang=e.target.value;save();toast(tr("languageSaved"));render();};}
@@ -422,29 +473,34 @@ document.addEventListener("DOMContentLoaded", () => {
     let timer=30;
     A.innerHTML='<main class="auth"><div class="auth-card"><button class="back" id="change">← '+tr("change")+'</button><p class="eyebrow">VERIFY</p><h1>'+tr("otp")+'</h1><p class="lead">+91 '+esc(user?.phone||"")+'</p><form id="otpForm"><input class="otp-input" id="otp" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code" autofocus required><button class="primary full">'+tr("verify")+' <span>→</span></button></form><div class="otp-meta"><span id="timer">00:30</span><button type="button" id="resend" class="text-btn" disabled>'+tr("resend")+'</button></div><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
     document.getElementById("change").onclick=()=>go("login");
-    const resend=document.getElementById("resend"), timerEl=document.getElementById("timer");
+    const resend=document.getElementById("resend"),timerEl=document.getElementById("timer");
     const int=setInterval(()=>{timer--;if(timerEl)timerEl.textContent="00:"+String(Math.max(timer,0)).padStart(2,"0");if(timer<=0){clearInterval(int);if(resend)resend.disabled=false;}},1000);
-    resend.onclick=()=>{timer=30;resend.disabled=true;toast(tr("resend"));};
+    resend.onclick=()=>{timer=30;resend.disabled=true;};
     document.getElementById("otpForm").onsubmit=async e=>{
       e.preventDefault();
       const otpValue=document.getElementById("otp").value;
       if(otpValue!=="123456")return toast(tr("otpError"));
-      role=accounts[accountId]?.role||"";
+      const requestedRole=accounts[accountId]?.role||"collector";
+      let sessionRole=requestedRole;
       try{
-        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:otpValue,role:role||"collector"})});
-        if(!sr.ok && sr.status!==503)return toast(tr("otpError"));
-      }catch{ /* keep the local demo session available if the backend is temporarily unavailable */ }
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:otpValue,role:requestedRole})});
+        const data=await sr.json().catch(()=>({}));
+        if(!sr.ok&&sr.status!==503)return toast(data.error||tr("otpError"));
+        sessionRole=data.role||requestedRole;
+      }catch{ /* local session remains usable for non-admin demo flows when backend is unavailable */ }
       user.verified=true;
       const existing=accounts[accountId];
-      role=existing?.role||"";
-      profile=existing?.profile||null;
-      pos=existing?.pos||null;
+      role=sessionRole||existing?.role||"";
+      profile=existing?.profile||profile||null;
+      pos=existing?.pos||pos||null;
       sessionReady=false;
       save();
       if(role){try{await ensureSession();}catch(err){console.warn("Session:",err);}}
+      if(role==="admin"){go("admin");return;}
       go(role?"dashboard":"role");
     };
   }
+
 
   function roleScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div></div></main>';
@@ -452,16 +508,64 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function setupScreen(){
     const isR=role==="recycler";
-    A.innerHTML='<main class="auth"><div class="auth-card setup-card"><p class="eyebrow">'+tr("setup")+'</p><h1>'+tr(role)+'</h1><form id="setupForm"><label>'+tr("name")+'<input id="name" value="'+esc(profile?.name||"")+'" required></label>'+
-      (isR?'<label>'+tr("business")+'<input id="business" value="'+esc(profile?.business||"")+'"></label><label>'+tr("materials")+'<input id="materials" value="'+esc(profile?.materials||"Plastic, paper, metal")+'" placeholder="Plastic, paper, metal"></label>':'')+
-      '<label>'+tr("area")+'<input id="area" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada" required></label><label>'+tr("radius")+'<select id="radius"><option>5 km</option><option>10 km</option><option>20 km</option></select></label>'+
-      '<div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div><button class="primary full">'+tr("save")+' <span>→</span></button></form></div></main>';
+    if(role==="admin"){go("admin");return;}
+    const docs=Array.isArray(profile?.documents)?profile.documents:[];
+    const docTypes=[["authorization","E-waste authorization certificate"],["registration","Business / registration certificate"],["gst","GST certificate (if applicable)"],["address_proof","Facility / address proof"]];
+    const docHtml=isR?'<section class="recycler-docs"><h2>'+tr("documentRequired")+'</h2><p class="muted">'+tr("reverification")+'</p>'+docTypes.map(([type,label])=>{const found=docs.find(d=>d.document_type===type);return '<div class="doc-row"><div><strong>'+label+'</strong><small>'+esc(found?.file_name||tr("noDocuments"))+'</small></div><label class="secondary doc-upload">'+tr("upload")+'<input type="file" data-doc-type="'+type+'" accept=".pdf,image/png,image/jpeg,image/webp"></label></div>';}).join("")+'</section>':'';
+    A.innerHTML='<main class="auth"><div class="auth-card setup-card wide-setup"><p class="eyebrow">'+tr("setup")+'</p><h1>'+tr(role)+'</h1><form id="setupForm">'+
+      '<label>'+tr("name")+'<input id="name" value="'+esc(profile?.name||"")+'" required></label>'+
+      (isR?'<label>'+tr("business")+'<input id="business" value="'+esc(profile?.business||"")+'" required></label>'+
+      '<label>'+tr("contactEmail")+'<input id="contactEmail" type="email" value="'+esc(profile?.contactEmail||"")+'" placeholder="business@example.com"></label>'+
+      '<label>'+tr("facilityAddress")+'<textarea id="facilityAddress" rows="2">'+esc(profile?.facilityAddress||profile?.area||"")+'</textarea></label>'+
+      '<label>'+tr("registrationNumber")+'<input id="registrationNumber" value="'+esc(profile?.registrationNumber||"")+'"></label>'+
+      '<label>'+tr("gstNumber")+'<input id="gstNumber" value="'+esc(profile?.gstNumber||"")+'"></label>'+
+      '<label>'+tr("authorizationNumber")+'<input id="authorizationNumber" value="'+esc(profile?.authorizationNumber||"")+'"></label>'+
+      '<label>'+tr("authorizationType")+'<input id="authorizationType" value="'+esc(profile?.authorizationType||"")+'" placeholder="CPCB / SPCB authorization"></label>'+
+      '<label>'+tr("authorizationExpiry")+'<input id="authorizationExpiry" type="date" value="'+esc(profile?.authorizationExpiry||"")+'"></label>'+
+      '<label>'+tr("materials")+'<input id="materials" value="'+esc(profile?.materials||"PCB, Cable, Battery")+'" placeholder="PCB, Cable, Battery"></label>'+
+      '<label>'+tr("pickupAvailable")+'<select id="pickupAvailable"><option value="yes">Yes</option><option value="no">No</option></select></label>'+
+      '<label>'+tr("serviceArea")+'<input id="serviceArea" value="'+esc(profile?.serviceArea||"")+'" placeholder="Krishna District"></label>'+
+      '<label>'+tr("offeredRateNotes")+'<textarea id="offeredRateNotes" rows="2" placeholder="Optional rates / buying notes">'+esc(profile?.offeredRateNotes||"")+'</textarea></label>'
+      :'')+
+      '<label>'+tr("area")+'<input id="area" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada" required></label><label>'+tr("radius")+'<select id="radius"><option '+(String(profile?.radius).startsWith("5")?"selected":"")+'>5 km</option><option '+(String(profile?.radius).startsWith("10")?"selected":"")+'>10 km</option><option '+(String(profile?.radius).startsWith("20")?"selected":"")+'>20 km</option></select></label>'+
+      '<div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="mapPick">◎ '+tr("chooseMap")+'</button></div><div id="miniMap" class="map small-map"></div>'+docHtml+
+      '<button class="primary full">'+(isR?tr("saveProfile"):tr("save"))+' <span>→</span></button></form></div></main>';
     if(window.L)initMap("miniMap",true);
     document.getElementById("loc").onclick=getLocation;
     document.getElementById("mapPick").onclick=()=>enableMapPick("miniMap");
-    document.getElementById("setupForm").onsubmit=e=>{e.preventDefault();profile={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};if(isR){profile.business=document.getElementById("business").value;profile.materials=document.getElementById("materials").value;}save();sessionReady=false;ensureSession().catch(()=>{});syncPending().then(()=>loadRecyclerData({force:true}));go("dashboard");};
+    if(isR){const sel=document.getElementById("pickupAvailable");if(sel)sel.value=profile?.pickupAvailable===false?"no":"yes";A.querySelectorAll("[data-doc-type]").forEach(input=>input.onchange=()=>uploadRecyclerDocument(input.dataset.docType,input.files?.[0]));}
+    document.getElementById("setupForm").onsubmit=async e=>{
+      e.preventDefault();
+      const next={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};
+      if(isR){
+        Object.assign(next,{business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,facilityAddress:document.getElementById("facilityAddress").value,
+          registrationNumber:document.getElementById("registrationNumber").value,gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,
+          authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,materials:document.getElementById("materials").value,
+          pickupAvailable:document.getElementById("pickupAvailable").value!=="no",serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value});
+      }
+      profile=next;save();sessionReady=false;
+      if(isR&&navigator.onLine){try{await ensureSession();await saveRecyclerProfileRemote();toast("✓ "+tr("saved"));}catch(err){console.warn(err);toast(err.message||tr("photoError"));}}
+      await syncPending();loadRecyclerData({force:true});go("dashboard");
+    };
   }
+
+  async function uploadRecyclerDocument(type,file){
+    if(!file)return;
+    if(!navigator.onLine)return toast("Connect to internet to upload documents.");
+    try{
+      if(file.size>2*1024*1024)return toast("Document max size is 2 MB.");
+      const dataUrl=await readDataUrl(file);
+      const res=await fetch("/api/recycler-profile?action=document",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({document_type:type,file_name:file.name,data_url:dataUrl})});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(data.error||"Document upload failed.");
+      profile={...profile,documents:data.profile?.recycler_documents||[...(profile.documents||[]),data.document],verificationStatus:"pending",verificationBadge:false};
+      save();toast("✓ "+tr("saved"));render();
+    }catch(err){console.error(err);toast(err.message||"Document upload failed.");}
+  }
+
+
   function dashboard(){
+    if(role==="admin") return adminScreen();
     if(role==="collector") return collectorDash();
     return recyclerDash();
   }
@@ -893,6 +997,54 @@ document.addEventListener("DOMContentLoaded", () => {
     if(catEl&&weightEl){catEl.dispatchEvent(new Event("input"));weightEl.dispatchEvent(new Event("input"));}
     toast("✓ "+raw);
   }
+  async function adminScreen(){
+    if(role!=="admin"){dashboard();return;}
+    let data={summary:{},collectors:[],recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[]},error="";
+    try{
+      await ensureSession();
+      const res=await fetch("/api/admin?action=overview",{credentials:"same-origin",cache:"no-store"});
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(body.error||body.detail||"Admin data unavailable.");
+      data=body;
+    }catch(err){error=err.message||"Admin data unavailable.";}
+
+    const s=data.summary||{};
+    const stat=(label,value)=>'<section class="panel admin-stat"><span>'+esc(label)+'</span><strong>'+Number(value||0)+'</strong></section>';
+    const statusLabel=x=>String(x.verification_status||"pending").replace(/_/g," ");
+    const recyclerCards=(data.recyclers||[]).map(x=>{
+      const docs=Array.isArray(x.recycler_documents)?x.recycler_documents:[];
+      const verified=!!x.verification_badge||statusLabel(x)==="verified";
+      const docLinks=docs.length?docs.map(d=>'<button class="text-btn admin-doc" data-phone="'+esc(x.phone)+'" data-path="'+esc(d.path)+'">📄 '+esc(d.file_name||d.document_type||"Document")+'</button>').join(" "):'<span class="muted">'+tr("noDocuments")+'</span>';
+      return '<article class="panel verify-card"><div class="verify-head"><div><h2>'+esc(x.business_name||x.name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>+91 '+esc(x.phone)+' · '+esc(x.name||"")+'</p></div><span class="verify-status '+esc(statusLabel(x))+'">'+esc(statusLabel(x))+'</span></div><div class="verify-grid"><span><b>'+tr("facilityAddress")+'</b>'+esc(x.facility_address||x.general_location||"—")+'</span><span><b>'+tr("materials")+'</b>'+esc((x.accepted_materials||[]).join(", ")||"—")+'</span><span><b>'+tr("registrationNumber")+'</b>'+esc(x.registration_number||"—")+'</span><span><b>'+tr("gstNumber")+'</b>'+esc(x.gst_number||"—")+'</span><span><b>'+tr("authorizationNumber")+'</b>'+esc(x.authorization_number||"—")+'</span><span><b>'+tr("authorizationType")+'</b>'+esc(x.authorization_type||"—")+'</span><span><b>'+tr("authorizationExpiry")+'</b>'+esc(x.authorization_expiry||"—")+'</span><span><b>'+tr("contactEmail")+'</b>'+esc(x.contact_email||"—")+'</span><span><b>'+tr("serviceArea")+'</b>'+esc(x.service_area||"—")+'</span><span><b>'+tr("pickupAvailable")+'</b>'+String(x.pickup_available!==false)+'</span></div><div class="doc-list"><strong>'+tr("documents")+':</strong> '+docLinks+'</div><div class="admin-actions">'+(verified?'<button class="secondary admin-action" data-decision="suspend" data-phone="'+esc(x.phone)+'">'+tr("suspend")+'</button>':'<button class="primary admin-action" data-decision="verify" data-phone="'+esc(x.phone)+'">★ '+tr("verify")+'</button><button class="secondary admin-action" data-decision="reject" data-phone="'+esc(x.phone)+'">'+tr("reject")+'</button>')+'</div></article>';
+    }).join("")||'<div class="empty panel">'+tr("noRecyclers")+'</div>';
+
+    const table=(rows,cols)=>rows.length?'<div class="admin-table-wrap"><table class="admin-table"><thead><tr>'+cols.map(c=>'<th>'+esc(c[0])+'</th>').join("")+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+cols.map(c=>'<td>'+esc(String(typeof c[1]==="function"?c[1](row):row[c[1]]??"—"))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>':'<div class="empty">'+tr("noRequests")+'</div>';
+
+    A.innerHTML=topbar()+'<main class="page admin-page"><section class="section-title"><div><p class="eyebrow">🛡 '+tr("adminPanel")+'</p><h1>'+tr("summary")+'</h1><p>Admin can review recycler documents, verify accounts, and inspect platform activity.</p></div><button class="secondary" id="adminRefresh">↻ '+tr("refresh")+'</button></section>'+
+      (error?'<div class="panel error-panel">'+esc(error)+'</div>':'')+
+      '<div class="admin-stats">'+stat(tr("collectors"),s.collectors)+stat(tr("recyclers"),s.recyclers)+stat(tr("pendingVerification"),s.pending_recycler_verification)+stat(tr("verifiedRecyclers"),s.verified_recyclers)+stat(tr("lots"),s.lots)+stat(tr("offers"),s.offers)+stat(tr("transactions"),s.transactions)+stat(tr("earnings"),s.earnings)+'</div>'+
+      '<section><div class="section-title admin-section-title"><div><h1>★ '+tr("verifyRecyclers")+'</h1><p>Review submitted registration, authorization and facility documents.</p></div></div><div class="verify-list">'+recyclerCards+'</div></section>'+
+      '<section class="admin-data"><div class="section-title admin-section-title"><div><h1>'+tr("allData")+'</h1><p>Collectors, requests, offers, transactions, handovers and earnings.</p></div></div>'+
+      '<details open><summary>'+tr("collectors")+' ('+(data.collectors||[]).length+')</summary>'+table(data.collectors||[],[["Phone","phone"],["Name","name"],["Language","preferred_language"],["Location","general_location"],["Active",r=>r.active]])+'</details>'+
+      '<details><summary>'+tr("lots")+' ('+(data.lots||[]).length+')</summary>'+table(data.lots||[],[["Lot","lot_reference"],["Collector","collector_phone"],["Material","material_category"],["Weight","approximate_weight_kg"],["Quoted","quoted_value"],["Final","final_sale_value"],["Status","status"],["Collected","collected_at"]])+'</details>'+
+      '<details><summary>'+tr("offers")+' ('+(data.offers||[]).length+')</summary>'+table(data.offers||[],[["Lot","lot_reference"],["Role","actor_role"],["Actor","actor_ref"],["Price","price"],["Time","created_at"]])+'</details>'+
+      '<details><summary>'+tr("transactions")+' ('+(data.transactions||[]).length+')</summary>'+table(data.transactions||[],[["Transaction","transaction_reference"],["Lot","lot_reference"],["Collector","collector_phone"],["Recycler","recycler_external_id"],["Quoted","quoted_price"],["Final","final_price"],["Payment","payment_status"],["Status","status"]])+'</details>'+
+      '<details><summary>'+tr("handovers")+' ('+(data.handovers||[]).length+')</summary>'+table(data.handovers||[],[["Transaction","transaction_reference"],["Handover","handover_reference"],["Weight","actual_weight_kg"],["Collector confirmed","collector_confirmed"],["Recycler confirmed","recycler_confirmed"],["Time","handover_at"]])+'</details>'+
+      '<details><summary>'+tr("earnings")+' ('+(data.earnings||[]).length+')</summary>'+table(data.earnings||[],[["Transaction","transaction_reference"],["Collector","collector_phone"],["Amount","amount"],["Status","status"],["Method","payment_method"],["Paid","paid_at"]])+'</details>'+
+      '</section></main>';
+    bindShell();
+    document.getElementById("adminRefresh").onclick=()=>render();
+    A.querySelectorAll(".admin-action").forEach(b=>b.onclick=async()=>{
+      const decision=b.dataset.decision,phone=b.dataset.phone;
+      const note=prompt("Verification note (optional):","")||"";
+      if(!confirm(decision.toUpperCase()+" this recycler?"))return;
+      try{const res=await fetch("/api/admin?action=verify-recycler",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone,decision,note})});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"Verification failed.");toast("✓ "+tr(decision==="verify"?"verified":decision==="reject"?"reject":"saved"));render();}catch(err){toast(err.message||"Verification failed.");}
+    });
+    A.querySelectorAll(".admin-doc").forEach(b=>b.onclick=async()=>{
+      try{const res=await fetch("/api/admin?action=document-url",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,path:b.dataset.path})});const body=await res.json();if(!res.ok)throw new Error(body.error||"Could not open document.");window.open(body.url,"_blank","noopener");}catch(err){toast(err.message||"Could not open document.");}
+    });
+  }
+
   function render(){
     if(!user?.verified){return auth();}
     if(!role)return roleScreen();
@@ -907,6 +1059,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(h==="recyclers")return recyclerScreen();
     if(h==="safety")return safetyScreen();
     if(h==="profile")return profileScreen();
+    if(h==="admin"&&role==="admin")return adminScreen();
     if(h==="earnings"&&role==="collector")return earningsScreen();
     dashboard();
   }
