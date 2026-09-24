@@ -22,8 +22,13 @@ export default async function handler(req,res){
         await call("/rest/v1/platform_transactions?on_conflict=transaction_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({...p,collector_phone:session.phone})});
       }else if(op.type==="handover"){
         await call("/rest/v1/platform_handovers?on_conflict=transaction_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(p)});
+        const confirmed=!!p.collector_confirmed&&!!p.recycler_confirmed;
+        await call("/rest/v1/platform_transactions?transaction_reference=eq."+encodeURIComponent(p.transaction_reference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:confirmed?"handed_over":"accepted",handed_over_at:confirmed?(p.handover_at||new Date().toISOString()):null,handover_address:p.handover_address||null,handover_latitude:p.handover_latitude??null,handover_longitude:p.handover_longitude??null})}).catch(()=>{});
       }else if(op.type==="payment"){
         await call("/rest/v1/platform_earnings?on_conflict=transaction_reference",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({...p,collector_phone:session.phone})});
+        await call("/rest/v1/platform_transactions?transaction_reference=eq."+encodeURIComponent(p.transaction_reference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({final_price:p.amount,payment_status:"paid",payment_method:p.payment_method||null,payment_reference:p.payment_reference||null,status:"completed",updated_at:p.paid_at||new Date().toISOString()})}).catch(()=>{});
+        const tx=await call("/rest/v1/platform_transactions?transaction_reference=eq."+encodeURIComponent(p.transaction_reference)+"&select=lot_reference");
+        if(tx?.[0]?.lot_reference)await call("/rest/v1/platform_lots?lot_reference=eq."+encodeURIComponent(tx[0].lot_reference),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({status:"completed",final_sale_value:p.amount})}).catch(()=>{});
       }
       results.push({id:op.id,type:op.type});
     }
