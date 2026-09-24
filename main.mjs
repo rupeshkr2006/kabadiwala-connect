@@ -299,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function topbar(){
     return '<header class="top"><a class="brand" href="#dashboard" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+
-      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button><button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
+      '<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="dashboard">'+tr("dashboardNav")+'</button><button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button>'+(role==="collector"?'<button data-p="earnings">₹ '+tr("earnings")+'</button>':'')+<button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button><button data-p="profile">'+tr("profile")+'</button><button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button>'+
       '<select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
   }
   function bindShell(){
@@ -336,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const resend=document.getElementById("resend"), timerEl=document.getElementById("timer");
     const int=setInterval(()=>{timer--;if(timerEl)timerEl.textContent="00:"+String(Math.max(timer,0)).padStart(2,"0");if(timer<=0){clearInterval(int);if(resend)resend.disabled=false;}},1000);
     resend.onclick=()=>{timer=30;resend.disabled=true;toast(tr("resend"));};
-    document.getElementById("otpForm").onsubmit=e=>{
+    document.getElementById("otpForm").onsubmit=async e=>{
       e.preventDefault();
       const otpValue=document.getElementById("otp").value;
       if(otpValue!=="123456")return toast(tr("otpError"));
