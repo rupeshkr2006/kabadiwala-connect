@@ -2,7 +2,7 @@ import { getSession } from "./session.js";
 export default async function handler(req,res){
   if(req.method!=="POST")return res.status(405).json({error:"Method not allowed"});
   const session=getSession(req);if(!session)return res.status(401).json({error:"Authentication required."});
-  const url=String(process.env.SUPABASE_URL||"").replace(/\/$/,""),key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+  const url=String(process.env.SUPABASE_URL||"").replace(/\/$/,""),key=String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
   if(!url||!key)return res.status(503).json({error:"Supabase sync is not configured."});
   const h={apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"};
   const call=async(path,opt={})=>{const r=await fetch(url+path,{...opt,headers:{...h,...(opt.headers||{})}});const t=await r.text();let j={};try{j=t?JSON.parse(t):{}}catch{}if(!r.ok)throw new Error(j?.message||j?.error||t);return j;};
