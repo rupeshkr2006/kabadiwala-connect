@@ -338,7 +338,13 @@ document.addEventListener("DOMContentLoaded", () => {
     resend.onclick=()=>{timer=30;resend.disabled=true;toast(tr("resend"));};
     document.getElementById("otpForm").onsubmit=e=>{
       e.preventDefault();
-      if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));
+      const otpValue=document.getElementById("otp").value;
+      if(otpValue!=="123456")return toast(tr("otpError"));
+      role=accounts[accountId]?.role||"";
+      try{
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:otpValue,role:role||"collector"})});
+        if(!sr.ok)return toast(tr("otpError"));
+      }catch{return toast(tr("otpError"));}
       user.verified=true;
       const existing=accounts[accountId];
       role=existing?.role||"";
@@ -503,7 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function profileScreen(){
     A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">'+tr("profile")+'</p><h1>'+esc(profile?.name||"")+'</h1></div></section><section class="panel profile-panel"><div class="profile-row"><span>'+tr("phone")+'</span><b>+91 '+esc(user?.phone||"")+'</b></div><div class="profile-row"><span>'+tr("role")+'</span><b>'+tr(role)+'</b></div><div class="profile-row"><span>'+tr("area")+'</span><b>'+esc(profile?.area||"")+'</b></div><div class="profile-row"><span>'+tr("language")+'</span><select id="profileLang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="mr">मराठी</option></select></div><button class="secondary full" id="edit">'+tr("edit")+'</button><button class="danger full" id="out">'+tr("signOut")+'</button></section></main>';
-    bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=()=>{if(confirm(tr("confirmReset"))){localStorage.clear();location.hash="login";render();}};
+    bindShell();document.getElementById("profileLang").value=lang;document.getElementById("profileLang").onchange=e=>{lang=e.target.value;save();render();};document.getElementById("edit").onclick=()=>go("setup");document.getElementById("out").onclick=async()=>{if(confirm(tr("confirmReset"))){await fetch("/api/session",{method:"DELETE",credentials:"same-origin"}).catch(()=>{});localStorage.clear();location.hash="login";render();}};
   }
   function initMap(id,compact=false){
     const el=document.getElementById(id);if(!el||!window.L)return;
