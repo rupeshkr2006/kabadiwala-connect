@@ -1,5 +1,6 @@
 import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
 
+/* production build marker: admin verification */
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
   const demo = { lat: 16.5062, lng: 80.6480 };
