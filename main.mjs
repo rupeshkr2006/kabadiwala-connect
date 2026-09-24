@@ -733,18 +733,48 @@ document.addEventListener("DOMContentLoaded", () => {
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
-  function startVoice(){
+  async function startVoice(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR)return toast(tr("voiceUnsupported"));
     if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
-    recognition=new SR();recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
+    recognition=new SR();
+    const locale=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";
+    recognition.lang=locale;
+    recognition.continuous=false;
+    recognition.interimResults=true;
+    recognition.maxAlternatives=3;
     const state=document.getElementById("listenState"), mic=document.getElementById("mic");
     recognition.onstart=()=>{if(state)state.textContent=tr("listening");if(mic)mic.classList.add("recording");};
     recognition.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";parseVoice(text.trim());};
-    recognition.onerror=()=>{if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
+    recognition.onerror=e=>{console.warn("Voice:",e?.error);if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
     recognition.onend=()=>{if(state)state.textContent="";if(mic)mic.classList.remove("recording");recognition=null;};
+
+    // Prefer the browser's on-device speech recognition when supported.
+    // A language pack may need a one-time download while online.
+    if("processLocally" in recognition && typeof SR.available==="function"){
+      try{
+        const availability=await SR.available({langs:[locale],processLocally:true,quality:"command"});
+        if(availability==="available"){
+          recognition.processLocally=true;
+        }else if((availability==="downloadable"||availability==="downloading")&&typeof SR.install==="function"&&navigator.onLine){
+          const installed=await SR.install({langs:[locale],processLocally:true,quality:"command"});
+          if(installed)recognition.processLocally=true;
+          else if(!navigator.onLine)return toast(tr("voiceUnsupported"));
+          else recognition.processLocally=false;
+        }else if(!navigator.onLine){
+          return toast(tr("voiceUnsupported"));
+        }else{
+          recognition.processLocally=false;
+        }
+      }catch(err){
+        console.warn("On-device voice unavailable:",err);
+        if(!navigator.onLine)return toast(tr("voiceUnsupported"));
+        recognition.processLocally=false;
+      }
+    }
     try{recognition.start();}catch(e){toast(tr("voiceError"));recognition=null;}
   }
+
   function parseVoice(text){
     const raw=normalizeDigits(text), low=raw.toLowerCase();
     const catMap=[
