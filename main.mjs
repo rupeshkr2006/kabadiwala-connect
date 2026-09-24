@@ -448,22 +448,27 @@ document.addEventListener("DOMContentLoaded", () => {
         actions='<button class="primary" data-accept="'+r.id+'">'+tr("acceptPrice")+' '+money(r.currentOffer)+'</button><input class="counter-input" data-counter="'+r.id+'" type="number" min="1" step="1" placeholder="'+tr("counterHint")+'" inputmode="numeric"><button class="secondary" data-counter-btn="'+r.id+'">'+tr("counter")+'</button>';
       } else if(role==="collector"&&isPending&&latestBy==="recycler"){
         actions='<button class="primary" data-accept="'+r.id+'">'+tr("acceptPrice")+' '+money(r.currentOffer)+'</button><input class="counter-input" data-counter="'+r.id+'" type="number" min="1" step="1" placeholder="'+tr("counterHint")+'" inputmode="numeric"><button class="secondary" data-counter-btn="'+r.id+'">'+tr("counter")+'</button>';
-      } else if(isAccepted&&role==="recycler"){
-        actions='<button class="primary" data-d="'+r.id+'">'+tr("complete")+'</button>';
+      } else if(isAccepted){
+        actions='<button class="primary" data-handover="'+r.id+'">🤝 '+tr("confirmHandover")+'</button>';
+      } else if(String(r.status).toLowerCase()==="handed over"&&role==="recycler"){
+        actions='<button class="primary" data-payment="'+r.id+'">₹ '+tr("payment")+'</button>';
       } else if(isPending){
         actions='<span class="waiting">'+tr("waiting")+'</span>';
       }
-      return '<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+(r.itemType?' · '+esc(r.itemType):'')+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><div class="request-prices"><span>Min <b>'+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</b></span><span>Indicative <b>'+money(r.indicativeTotal)+'</b></span><span>Expected <b>'+money(r.expectedPrice||r.askingPrice)+'</b></span><span>Current <b>'+money(r.currentOffer)+'</b></span>'+(r.agreedPrice?'<span class="agreed-price">Agreed <b>'+money(r.agreedPrice)+'</b></span>':'')+'</div><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+actions+'<button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>';
+      return '<article class="panel full-request"><div class="request-main"><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h2>'+esc(r.category)+(r.itemType?' · '+esc(r.itemType):'')+' · '+esc(r.quantity)+'</h2><p>'+esc(r.condition)+' · '+esc(r.address||"")+'</p><div class="request-prices"><span>Min <b>'+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</b></span><span>Indicative <b>'+money(r.indicativeTotal)+'</b></span><span>Expected <b>'+money(r.expectedPrice||r.askingPrice)+'</b></span><span>Current <b>'+money(r.currentOffer)+'</b></span>'+(r.agreedPrice?'<span class="agreed-price">Agreed <b>'+money(r.agreedPrice)+'</b></span>':'')+'</div><p class="muted">'+esc(r.notes||"")+'</p></div><div class="request-actions">'+actions+'<button class="secondary" data-match="'+r.id+'">♻ '+tr("matchRecycler")+'</button><button class="secondary" data-v="'+r.id+'">'+tr("view")+'</button></div></article>';
     }).join(""):'<div class="empty panel">'+tr("noRequests")+'</div>')+'</div></main>';
     bindShell();
     A.querySelectorAll("[data-accept]").forEach(b=>b.onclick=()=>acceptOffer(b.dataset.accept));
+    A.querySelectorAll("[data-match]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.match));if(r)showMatches(r);});
     A.querySelectorAll("[data-counter-btn]").forEach(b=>b.onclick=()=>counterOffer(b.dataset.counterBtn));
-    A.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>updateStatus(b.dataset.d,"Completed"));
+    A.querySelectorAll("[data-handover]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.handover));if(r)confirmHandover(r);});
+    A.querySelectorAll("[data-payment]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.payment));if(r)recordPayment(r);});
     A.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.v));if(r&&r.lat)showRequestMap(r);});
   }
-  function acceptOffer(id){
+  async function acceptOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
     r.agreedPrice=Number(r.currentOffer); r.status="Accepted"; r.priceStatus="Agreed"; save(); render();
+    await acceptWorkflow(r); save(); render();
   }
   function counterOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
