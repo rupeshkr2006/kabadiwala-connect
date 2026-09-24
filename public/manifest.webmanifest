@@ -1,0 +1,13 @@
+{
+  "name": "Kabadiwala Connect",
+  "short_name": "Kabadiwala",
+  "description": "Offline-first scrap collection and recycling marketplace",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faf8",
+  "theme_color": "#176b49",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
