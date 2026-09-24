@@ -3,7 +3,7 @@ import { getSession } from "./session.js";
 
 const supabase=()=>{
   const url=String(process.env.SUPABASE_URL||"").replace(/\/$/,"");
-  const key=String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
+  const key=String(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY||"").trim();
   if(!url||!key)throw new Error("Supabase backend is not configured.");
   return {url,key,headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"}};
 };
