@@ -56,16 +56,27 @@ export default async function handler(req,res){
       const paidRows=await rest("/rest/v1/platform_earnings?collector_phone=eq."+encodeURIComponent(session.phone)+"&select=*&order=created_at.desc").catch(()=>[]);
       const paidByTx=new Map((paidRows||[]).map(x=>[String(x.transaction_reference||""),x]));
       const txRows=await rest("/rest/v1/platform_transactions?collector_phone=eq."+encodeURIComponent(session.phone)+"&status=neq.cancelled&select=transaction_reference,lot_reference,quoted_price,final_price,payment_status,payment_method,status,updated_at,created_at&order=created_at.desc&limit=100").catch(()=>[]);
-      const pendingRows=(txRows||[]).filter(tx=>{
-        const ref=String(tx.transaction_reference||"");
-        return !paidByTx.has(ref)&&String(tx.payment_status||"").toLowerCase()!=="paid"&&Number(tx.final_price||tx.quoted_price||0)>0;
-      }).map(tx=>({
-        transaction_reference:tx.transaction_reference,
-        amount:Number(tx.final_price||tx.quoted_price||0),
-        status:"pending",
-        payment_method:null,
-        created_at:tx.updated_at||tx.created_at
-      }));
+      const pendingByRef=new Map();
+      for(const tx of (txRows||[])){
+        const ref=String(tx.transaction_reference||tx.lot_reference||"");
+        const amount=Number(tx.final_price||tx.quoted_price||0);
+        if(ref&&amount>0&&!paidByTx.has(String(tx.transaction_reference||""))&&String(tx.payment_status||"").toLowerCase()!=="paid"){
+          pendingByRef.set(ref,{transaction_reference:ref,amount,status:"pending",payment_method:null,created_at:tx.updated_at||tx.created_at});
+        }
+      }
+
+      // Lots can be created before a transaction row exists. Show their quoted
+      // amount as pending so the collector can see expected money immediately.
+      const lots=await rest("/rest/v1/platform_lots?collector_phone=eq."+encodeURIComponent(session.phone)+"&status=not.in.(completed,cancelled)&quoted_value=not.is.null&select=lot_reference,quoted_value,estimated_value,status,collected_at,created_at&order=created_at.desc&limit=100").catch(()=>[]);
+      for(const lot of (lots||[])){
+        const ref=String(lot.lot_reference||"");
+        const amount=Number(lot.quoted_value||0);
+        if(ref&&amount>0&&!pendingByRef.has(ref)&&!paidByTx.has(ref)){
+          pendingByRef.set(ref,{transaction_reference:ref,amount,status:"pending",payment_method:null,created_at:lot.collected_at||lot.created_at});
+        }
+      }
+
+      const pendingRows=[...pendingByRef.values()];
       const rows=[...(paidRows||[]),...pendingRows].sort((a,b)=>new Date(b.paid_at||b.created_at||0)-new Date(a.paid_at||a.created_at||0));
       const paid=(paidRows||[]).reduce((a,x)=>a+Number(x.amount||0),0);
       const pending=pendingRows.reduce((a,x)=>a+Number(x.amount||0),0);
