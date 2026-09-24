@@ -295,23 +295,42 @@ document.addEventListener("DOMContentLoaded", () => {
     try{await apiPost("payment",{transactionReference:r.transactionReference,amount,method});r.agreedPrice=amount;r.status="Completed";r.finalSaleValue=amount;r.paymentStatus="paid";save();render();toast(tr("paidSuccess"));}catch{enqueue({id:"payment:"+r.transactionReference,type:"payment",data:{transaction_reference:r.transactionReference,amount,status:"paid",payment_method:method,payment_reference:null,paid_at:new Date().toISOString()}}).catch(()=>{});r.agreedPrice=amount;r.status="Completed";save();render();toast("Saved offline");}
   }
   async function earningsScreen(){
-    let data={rows:[],total:0,paid:0,pending:0};
-    try{data=await apiGet("ledger");}
-    catch{
-      const localPaid=requests.filter(r=>r.status==="Completed"&&Number(r.finalSaleValue||r.agreedPrice||0)>0)
-        .map(r=>({amount:Number(r.finalSaleValue||r.agreedPrice),transaction_reference:r.transactionReference||r.lotReference,payment_method:r.paymentMethod||"cash",status:"paid",paid_at:r.paidAt||r.completedAt||r.collectedAt}));
-      const localPending=requests.filter(r=>!["Completed","Cancelled"].includes(String(r.status))&&Number(r.agreedPrice||r.currentOffer||r.expectedPrice||0)>0)
-        .map(r=>({amount:Number(r.agreedPrice||r.currentOffer||r.expectedPrice),transaction_reference:r.transactionReference||r.lotReference,payment_method:"—",status:"pending"}));
-      const rows=[...localPaid,...localPending];
-      const paid=localPaid.reduce((a,x)=>a+Number(x.amount||0),0),pending=localPending.reduce((a,x)=>a+Number(x.amount||0),0);
-      data={rows,total:paid+pending,paid,pending};
+    let serverData={rows:[],total:0,paid:0,pending:0};
+    try{serverData=await apiGet("ledger");}catch{}
+
+    const merged=new Map();
+    for(const row of (serverData.rows||[])){
+      const key=String(row.transaction_reference||"");
+      if(key)merged.set(key,row);
     }
+
+    // Include unsynced local sales so earnings don't appear empty just because
+    // the latest payment/transaction has not reached Supabase yet.
+    for(const r of requests){
+      const key=String(r.transactionReference||r.lotReference||"");
+      if(!key)continue;
+      const status=String(r.status||"").toLowerCase();
+      const finalAmount=Number(r.finalSaleValue||0);
+      const pendingAmount=Number(r.agreedPrice||r.currentOffer||r.expectedPrice||0);
+      if(status==="completed"&&finalAmount>0&&!merged.has(key)){
+        merged.set(key,{transaction_reference:key,amount:finalAmount,status:"paid",payment_method:r.paymentMethod||"cash",paid_at:r.paidAt||r.completedAt||r.collectedAt||null});
+      }else if(!["completed","cancelled"].includes(status)&&pendingAmount>0&&!merged.has(key)){
+        merged.set(key,{transaction_reference:key,amount:pendingAmount,status:"pending",payment_method:null,created_at:r.collectedAt||null});
+      }
+    }
+
+    const rows=[...merged.values()].filter(x=>Number(x.amount||0)>0).sort((a,b)=>
+      new Date(b.paid_at||b.created_at||0)-new Date(a.paid_at||a.created_at||0)
+    );
+    const paid=rows.filter(x=>String(x.status).toLowerCase()==="paid").reduce((a,x)=>a+Number(x.amount||0),0);
+    const pending=rows.filter(x=>String(x.status).toLowerCase()!=="paid").reduce((a,x)=>a+Number(x.amount||0),0);
     const fmtDate=v=>v?new Date(v).toLocaleString():"—";
-    const cards=(data.rows||[]).map(x=>{
+    const cards=rows.map(x=>{
       const isPaid=String(x.status).toLowerCase()==="paid";
       return '<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference||"—")+'</span><span>'+fmtDate(x.paid_at||x.created_at)+'</span></div><div class="ledger-meta"><span class="ledger-badge '+(isPaid?"paid":"pending")+'">'+(isPaid?tr("paid"):tr("pendingAmount"))+'</span><span>'+esc(x.payment_method||"—")+'</span></div></div>';
     }).join("");
-    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div><button class="secondary" id="refreshEarnings">↻ '+tr("refreshMarket")+'</button></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(data.total||0)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(data.paid||0)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(data.pending||0)+'</strong></section></div><section class="panel ledger-list">'+(cards||'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';
+
+    A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div><button class="secondary" id="refreshEarnings">↻ '+tr("refreshMarket")+'</button></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(paid)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(paid)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(pending)+'</strong></section></div><section class="panel ledger-list"><div class="ledger-header"><strong>'+tr("earnings")+'</strong><span>'+rows.length+' '+tr("requests")+'</span></div>'+(cards||'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';
     bindShell();
     const refresh=document.getElementById("refreshEarnings");if(refresh)refresh.onclick=()=>render();
   }
