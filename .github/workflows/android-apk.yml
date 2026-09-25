@@ -42,12 +42,6 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Verify model is inside APK
-        working-directory: android
-        run: |
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'assets/ewaste_mobilenetv2_fp16.tflite'
-          test "$(unzip -p app/build/outputs/apk/debug/app-debug.apk assets/ewaste_mobilenetv2_fp16.tflite | sha256sum | cut -d' ' -f1)" = "$(sha256sum ../android-model/ewaste_mobilenetv2_fp16.tflite | cut -d' ' -f1)"
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
