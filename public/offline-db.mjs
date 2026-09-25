@@ -1,5 +1,5 @@
 const DB_NAME = "kabadiwala-connect";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function openDB(){
   return new Promise((resolve,reject)=>{
@@ -9,6 +9,7 @@ function openDB(){
       if(!db.objectStoreNames.contains("state")) db.createObjectStore("state");
       if(!db.objectStoreNames.contains("outbox")) db.createObjectStore("outbox",{keyPath:"id"});
       if(!db.objectStoreNames.contains("models")) db.createObjectStore("models");
+      if(!db.objectStoreNames.contains("media")) db.createObjectStore("media",{keyPath:"id"});
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
@@ -82,4 +83,20 @@ export async function removeOutbox(id){
     tx.objectStore("outbox").delete(id);
     tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
   });
+}
+
+export async function putMedia(id,blob,meta={}){
+  if(!("indexedDB" in window)) return;
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{const tx=db.transaction("media","readwrite");tx.objectStore("media").put({id,blob,...meta,createdAt:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+}
+export async function getMedia(id){
+  if(!("indexedDB" in window)) return null;
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{const req=db.transaction("media").objectStore("media").get(id);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);});
+}
+export async function removeMedia(id){
+  if(!("indexedDB" in window)) return;
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{const tx=db.transaction("media","readwrite");tx.objectStore("media").delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
 }
