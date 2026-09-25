@@ -665,8 +665,63 @@ function listScreen(){
   }
   async function acceptOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
-    r.agreedPrice=Number(r.currentOffer); r.status="Accepted"; r.priceStatus="Agreed"; save(); render();
-    await acceptWorkflow(r); save(); render();
+    const price=Number(r.currentOffer||r.askingPrice||r.indicativeTotal);
+    if(!Number.isFinite(price)||price<=0)return toast(tr("priceRequired"));
+
+    // Recycler "Buy" must create the transaction directly. Do not call
+    // syncBackendLot() here because that endpoint uses the current session
+    // phone as collector_phone and would overwrite the collector on an
+    // existing lot when a recycler accepts it.
+    r.agreedPrice=price;
+    r.currentOffer=price;
+    r.status="Accepted";
+    r.priceStatus="Agreed";
+    save();
+    render();
+
+    try{
+      if(!r.lotReference)throw new Error("Lot reference missing.");
+      if(!r.recyclerExternalId)r.recyclerExternalId="ACCOUNT:"+accountId;
+      const data=await apiPost("transaction",{
+        lotReference:r.lotReference,
+        recyclerExternalId:r.recyclerExternalId,
+        quotedPrice:price,
+        finalPrice:price
+      });
+      r.transactionReference=data.transaction?.transaction_reference||r.transactionReference;
+      r.status="Accepted";
+      r.agreedPrice=Number(data.transaction?.final_price||price);
+      r.currentOffer=r.agreedPrice;
+      save();
+      toast("✓ Purchase accepted");
+    }catch(err){
+      // Keep the action retryable and queue it for offline sync instead of
+      // silently failing after the UI has changed.
+      r.status="Pending";
+      r.priceStatus=tr("collectorOffer");
+      save();
+      enqueue({
+        id:"transaction:"+r.lotReference+":"+accountId,
+        type:"transaction",
+        data:{
+          transaction_reference:r.transactionReference||"TX-"+Date.now().toString(36).toUpperCase(),
+          lot_reference:r.lotReference,
+          collector_phone:r.collectorPhone||null,
+          recycler_external_id:"ACCOUNT:"+accountId,
+          quoted_price:price,
+          final_price:price,
+          payment_method:null,
+          payment_status:"pending",
+          status:"accepted",
+          collection_address:r.address,
+          collection_latitude:r.lat,
+          collection_longitude:r.lng,
+          collected_at:r.collectedAt||new Date().toISOString()
+        }
+      }).catch(()=>{});
+      toast(err?.message||"Purchase could not be completed. Try again.");
+    }
+    render();
   }
   async function counterOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
