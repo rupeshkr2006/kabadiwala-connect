@@ -44,15 +44,39 @@ export default async function handler(req,res){
         rest("/rest/v1/platform_offers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_transactions?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_handovers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
-        rest("/rest/v1/platform_earnings?select=*&order=created_at.desc&limit=300").catch(()=>[])
+        rest("/rest/v1/platform_earnings?select=*&order=created_at.desc&limit=300").catch(()=>[]),
+        rest("/rest/v1/latest_price_board?select=id,material_id,material_name,sub_category,city,state,buying_price,selling_price,unit,market_min,market_max,source,valid_from,observed_at,price_type&order=material_name.asc").catch(()=>[])
       ]);
       const pending=(recyclers||[]).filter(x=>String(x.verification_status||"pending")==="pending").length;
       const verified=(recyclers||[]).filter(x=>String(x.verification_status)==="verified").length;
       return res.status(200).json({
         summary:{collectors:(collectors||[]).length,recyclers:(recyclers||[]).length,pending_recycler_verification:pending,verified_recyclers:verified,lots:(lots||[]).length,offers:(offers||[]).length,transactions:(transactions||[]).length,handovers:(handovers||[]).length,earnings:(earnings||[]).length},
-        collectors:collectors||[],recyclers:recyclers||[],lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],
+        collectors:collectors||[],recyclers:recyclers||[],lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:market||[],
         generated_at:new Date().toISOString()
       });
+    }
+    if(req.method==="POST"&&action==="save-market-item"){
+      const p=req.body||{};
+      const materialName=String(p.material_name||"").trim().slice(0,120);
+      const subCategory=String(p.sub_category||"").trim().slice(0,120)||null;
+      const city=String(p.city||"Vijayawada").trim().slice(0,120)||"Vijayawada";
+      const state=String(p.state||"Andhra Pradesh").trim().slice(0,120)||"Andhra Pradesh";
+      const unit=String(p.unit||"kg").trim().slice(0,20)||"kg";
+      const source=String(p.source||"Admin verified market price").trim().slice(0,200)||"Admin verified market price";
+      const buying=Number(p.buying_price), selling=Number(p.selling_price||buying), min=Number(p.market_min||buying), max=Number(p.market_max||selling);
+      if(!materialName||![buying,selling,min,max].every(Number.isFinite)||buying<0||selling<0||min<0||max<0)return res.status(400).json({error:"Enter a valid market item and non-negative prices."});
+      let materialId=null;
+      const existingMaterial=await rest("/rest/v1/materials?name=eq."+encodeURIComponent(materialName)+"&select=id&limit=1");
+      if(existingMaterial?.[0]?.id){
+        materialId=existingMaterial[0].id;
+        await rest("/rest/v1/materials?id=eq."+encodeURIComponent(materialId),{method:"PATCH",headers:{"Prefer":"return=minimal"},body:JSON.stringify({active:true,sub_category:subCategory,updated_at:new Date().toISOString()})});
+      }else{
+        const created=await rest("/rest/v1/materials",{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify({name:materialName,sub_category:subCategory,category:materialName,source_type:"admin",active:true})});
+        materialId=created?.[0]?.id||null;
+      }
+      const now=new Date().toISOString();
+      const rows=await rest("/rest/v1/prices",{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify({material_id:materialId,material_name:materialName,sub_category:subCategory,city,state,buying_price:buying,selling_price:selling,unit,market_min:min,market_max:max,source,price_type:"admin",valid_from:now,observed_at:now})});
+      return res.status(200).json({ok:true,item:rows?.[0]||null});
     }
     if(req.method==="POST"&&action==="verify-recycler"){
       const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,""),decision=String(p.decision||"").toLowerCase();
