@@ -506,8 +506,10 @@ document.addEventListener("DOMContentLoaded", () => {
       // Put every value returned by the AI into the matching form field.
       // Do not invent weight/price/condition when the model did not return them.
       const setValue=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined&&value!==null&&String(value).trim()!==""){el.value=String(value);el.dispatchEvent(new Event("input",{bubbles:true}));}};
-      if(result.category)setValue("cat",result.category);
-      if(result.itemType)setValue("itemType",result.itemType);
+      const detectedItem=result.itemType||result.label||result.predictedLabel||result.className||result.prediction||"";
+      const detectedMaterial=result.category||result.material||result.materialCategory||(detectedItem?"e-waste":"");
+      setValue("cat",detectedMaterial);
+      setValue("itemType",detectedItem);
       if(result.weight)setValue("weight",result.weight);
       if(result.askingPrice||result.expectedPrice||result.price)setValue("askingPrice",result.askingPrice||result.expectedPrice||result.price);
       if(result.condition){
