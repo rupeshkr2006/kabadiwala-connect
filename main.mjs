@@ -546,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
     const taskId="image:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
-    if(state)state.textContent=navigator.onLine?"Analyzing with Gemini…":"Pending local save — will sync when online…";
+    if(state)state.textContent=navigator.onLine?"Analyzing photo…":"Pending local save — will sync when online…";
     if(btn)btn.disabled=true;
     try{
       await putMedia(taskId,file,{kind:"image_analysis",mimeType:file.type||"image/jpeg"});
@@ -573,7 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
     await removeMedia(taskId).catch(()=>{});
     const state=document.getElementById("photoState");
     if(state)state.textContent=(applied.category||applied.itemType)?"✓ AI result synced — "+applied.itemType+(Number.isFinite(applied.confidence)? " · "+Math.round(applied.confidence*100)+"%":""):"✓ AI analyzed";
-    toast("✓ Gemini analysis complete"+(applied.itemType?" — "+applied.itemType:""));
+    toast("✓ Photo analysis complete"+(applied.itemType?" — "+applied.itemType:""));
     return result;
   }
   async function predictPriceFromForm(){
@@ -603,7 +603,7 @@ document.addEventListener("DOMContentLoaded", () => {
     await putState("lastPricePrediction",{taskId,params,result,completedAt:Date.now()});
     await removeOutbox(taskId).catch(()=>{});
     const state=document.getElementById("pricePredictState");if(state)state.textContent=price>0?"✓ Price synced: ₹"+Math.round(price):"✓ Prediction synced";
-    toast(price>0?"✓ Gemini price estimate: ₹"+Math.round(price):"✓ Price prediction complete");
+    toast(price>0?"✓ Price estimate: ₹"+Math.round(price):"✓ Price prediction complete");
     return result;
   }
 function listScreen(){
