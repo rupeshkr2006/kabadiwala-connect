@@ -20,11 +20,24 @@ export default async function handler(req, res) {
   "notes": "short evidence-based description",
   "confidence": 0.0
 }
-Do not identify people. Do not invent weight or price. If the material cannot be determined reliably, use "unknown". This is an estimate for form assistance, not a final material-grade determination.`;
+Do not identify people. Do not invent weight or price. If the material cannot be determined reliably, use "unknown". Use the exact field names shown above. "itemType" must be a short concrete name such as "copper wire", "cardboard box", "PET bottle", "aluminium can", or "mobile phone". "condition" must be one of good, used, damaged, unknown. "confidence" must be a number from 0 to 1. This is an estimate for form assistance, not a final material-grade determination.`;
 
     const requestBody = {
       contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data } }] }],
-      generationConfig: { responseMimeType: "application/json" }
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            category: { type: "STRING", enum: ["plastic","paper","cardboard","metal","iron","copper","aluminium","e-waste","unknown"] },
+            itemType: { type: "STRING" },
+            condition: { type: "STRING", enum: ["good","used","damaged","unknown"] },
+            notes: { type: "STRING" },
+            confidence: { type: "NUMBER" }
+          },
+          required: ["category","itemType","condition","notes","confidence"]
+        }
+      }
     };
 
     // Gemini 3.8 Flash is the primary model. If it is temporarily overloaded,
