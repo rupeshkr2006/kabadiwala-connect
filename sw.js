@@ -1,4 +1,4 @@
-const CACHE_NAME = "kabadiwala-connect-v12-offline-ai";
+const CACHE_NAME = "kabadiwala-connect-v13-offline-ai";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -7,7 +7,7 @@ const APP_SHELL = [
   "/favicon.svg",
   "/offline-db.mjs",
   "/manifest.webmanifest", "/admin.html",
-  "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js",
+  "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.9/dist/tf-tflite.min.js",
   "/offline-ai.mjs"
 ];
