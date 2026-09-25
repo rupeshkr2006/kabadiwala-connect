@@ -1,7 +1,5 @@
-import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
-import { localWasteAI } from "./offline-ai.mjs";
+import { putState, getState, enqueue, getOutbox, removeOutbox, putMedia, getMedia, removeMedia } from "./offline-db.mjs";
 
-/* production build marker: admin verification */
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
   const demo = { lat: 16.5062, lng: 80.6480 };
@@ -14,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let requests = JSON.parse(localStorage.requests || "[]");
   let profile = JSON.parse(localStorage.kcProfile || "null");
   let recognition = null;
+  let voiceRecorder = null;
+  let voiceChunks = [];
   let maps = {};
   let marketLatest = [];
   let marketTrends = [];
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"Indicative market rate", minimumPrice:"Minimum expected price", estimated:"Estimated value", itemType:"Item / type", askingPrice:"Your asking price", expectedPrice:"Expected price", currentOffer:"Current offer",
       counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
       counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
-      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the details below.", uploadPhoto:"Upload scrap photo", uploadHint:"Click to choose a photo or take one with your camera.", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
+      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the matching fields below.", uploadPhoto:"Upload scrap photo", uploadHint:"Choose a photo from your gallery or take a new photo.", takePhoto:"Take Photo", galleryPhoto:"Choose from Gallery", aiFieldsFilled:"AI fields filled", aiNoFields:"AI result did not contain a classified item", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
 
     },
     hi: {
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अनुमानित बाजार दर", minimumPrice:"न्यूनतम अनुमानित कीमत", estimated:"अनुमानित मूल्य", itemType:"वस्तु / प्रकार", askingPrice:"आपकी कीमत", expectedPrice:"आपकी अपेक्षित कीमत", currentOffer:"वर्तमान ऑफर",
       counter:"नई कीमत", acceptPrice:"कीमत स्वीकार करें", agreed:"तय कीमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रीसायकलर ऑफर",
       counterHint:"नई कीमत डालें", priceNote:"यह केवल अनुमान है — अंतिम कीमत बातचीत से तय होगी।", priceRequired:"सही कीमत डालें।",
-      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे की जानकारी भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"फोटो चुनने या कैमरा इस्तेमाल करने के लिए दबाएं।", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें."
+      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे के संबंधित बॉक्स भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"गैलरी से फोटो चुनें या नई फोटो लें।", takePhoto:"फोटो लें", galleryPhoto:"गैलरी से चुनें", aiFieldsFilled:"AI ने बॉक्स भर दिए", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें."
 
     },
     mr: {
@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अंदाजे बाजार दर", minimumPrice:"किमान अंदाजे किंमत", estimated:"अंदाजे किंमत", itemType:"वस्तू / प्रकार", askingPrice:"तुमची किंमत", expectedPrice:"तुमची अपेक्षित किंमत", currentOffer:"सध्याची ऑफर",
       counter:"नवी किंमत", acceptPrice:"किंमत स्वीकारा", agreed:"ठरलेली किंमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रिसायकलर ऑफर",
       counterHint:"नवी किंमत टाका", priceNote:"ही फक्त अंदाजे किंमत आहे — अंतिम किंमत चर्चेने ठरेल.", priceRequired:"योग्य किंमत टाका.",
-      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील माहिती भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"फोटो निवडण्यासाठी किंवा कॅमेरा वापरण्यासाठी दाबा.", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा."
+      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील संबंधित बॉक्स भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"गॅलरीतून फोटो निवडा किंवा नवीन फोटो घ्या.", takePhoto:"फोटो घ्या", galleryPhoto:"गॅलरीतून निवडा", aiFieldsFilled:"AI ने बॉक्स भरले", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा."
 
     }
   };
@@ -261,6 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
     return data;
   }
+
   async function apiGet(action){
     await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{credentials:"same-origin",cache:"no-store"});
@@ -339,16 +340,22 @@ document.addEventListener("DOMContentLoaded", () => {
     try{await ensureSession();}catch{return;}
     const items=await getOutbox().catch(()=>[]);
     if(!items.length)return;
+    for(const item of items.filter(x=>x.type==="image_analysis"||x.type==="price_prediction")){
+      try{if(item.type==="image_analysis")await processImageTask(item.id);else await processPriceTask(item.id,item.data?.params||{});}
+      catch(err){console.warn("Pending AI task:",item.id,err);}
+    }
+    const remaining=await getOutbox().catch(()=>[]);
+    const apiItems=remaining.filter(x=>x.type!=="image_analysis"&&x.type!=="price_prediction");
+    if(!apiItems.length){updateNetworkStatus();return;}
     try{
-      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:items})});
-      if(!response.ok)return;
+      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:apiItems}),credentials:"same-origin"});
       const data=await response.json().catch(()=>({}));
-      for(const item of items){
-        if((data.results||[]).some(x=>x.id===item.id)) await removeOutbox(item.id).catch(()=>{});
-      }
+      if(!response.ok)return;
+      for(const item of apiItems)if((data.results||[]).some(x=>x.id===item.id))await removeOutbox(item.id).catch(()=>{});
       updateNetworkStatus();
     }catch{}
   }
+
   function updateNetworkStatus(){
     const el=document.getElementById("netStatus");
     if(!el)return;
@@ -357,6 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
     el.title=navigator.onLine?"Connected — pending changes will sync.":"Offline — changes are saved on this device.";
   }
   window.addEventListener("online",()=>{updateNetworkStatus();syncPending();});
+  setInterval(()=>{if(navigator.onLine)syncPending();},15000);
   window.addEventListener("offline",updateNetworkStatus);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   function toast(text){ const d=document.createElement("div"); d.className="toast"; d.textContent=text; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
@@ -488,77 +496,144 @@ document.addEventListener("DOMContentLoaded", () => {
   function requestCard(r){
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
+  function applyAiResult(result){
+    let payload=result;
+    if(typeof payload==="string"){
+      try{payload=JSON.parse(payload);}catch{payload={};}
+    }
+    payload=(payload&&typeof payload==="object"&&(payload.value||payload.data||payload.result))||payload||{};
+    if(typeof payload==="string"){try{payload=JSON.parse(payload);}catch{payload={};}}
+    const setValue=(id,value)=>{
+      const el=document.getElementById(id);
+      if(!el||value===undefined||value===null)return false;
+      const text=String(value).trim();
+      if(!text)return false;
+      el.value=text;
+      el.dispatchEvent(new Event("input",{bubbles:true}));
+      el.dispatchEvent(new Event("change",{bubbles:true}));
+      return true;
+    };
+    const rawCategory=String(payload.category||payload.material||payload.materialCategory||payload.scrapCategory||payload.type||"").trim();
+    const rawItem=String(payload.itemType||payload.item||payload.label||payload.predictedLabel||payload.className||payload.prediction||payload.materialName||"").trim();
+    const categoryMap=[
+      ["plastic",/plastic|polyethylene|pet|polypropylene/i],["paper",/paper|newspaper|magazine/i],
+      ["cardboard",/cardboard|carton|corrugated/i],["metal",/^metal$|mixed metal|scrap metal/i],
+      ["iron",/iron|steel/i],["copper",/copper|wire|cable/i],["aluminium",/alumin/i],
+      ["e-waste",/e-?waste|electronic|electronics|pcb|circuit|computer|phone|laptop|battery/i]
+    ];
+    const mapped=categoryMap.find(([,re])=>re.test(rawCategory)||re.test(rawItem));
+    const category=mapped?mapped[0]:rawCategory;
+    if(category)setValue("cat",category);
+    if(rawItem)setValue("itemType",rawItem);
+    const weight=payload.weightKg??payload.weight_kg??payload.weight;
+    if(weight!==undefined&&weight!==null)setValue("weight",String(weight).match(/kg/i)?String(weight):String(weight)+" kg");
+    const price=payload.askingPrice??payload.expectedPrice??payload.price;
+    if(price!==undefined&&price!==null&&Number(price)>0)setValue("askingPrice",Math.round(Number(price)));
+    if(payload.condition){
+      const x=String(payload.condition).toLowerCase(),el=document.getElementById("cond");
+      if(el){
+        el.selectedIndex=/damaged|broken|poor|bad/.test(x)?2:/used|old|fair/.test(x)?1:0;
+        el.dispatchEvent(new Event("change",{bubbles:true}));
+      }
+    }
+    const notes=payload.notes??payload.description??payload.observation;
+    if(notes)setValue("notes",notes);
+    document.getElementById("cat")?.dispatchEvent(new Event("input",{bubbles:true}));
+    document.getElementById("weight")?.dispatchEvent(new Event("input",{bubbles:true}));
+    return {category:document.getElementById("cat")?.value||"",itemType:document.getElementById("itemType")?.value||"",confidence:Number(payload.confidence)};
+  }
   async function analyzeScrapPhoto(file){
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
-    if(state)state.textContent=tr("analyzingPhoto");
-    if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
+    const taskId="image:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    if(state)state.textContent=navigator.onLine?"Analyzing with Gemini…":"Pending local save — will sync when online…";
+    if(btn)btn.disabled=true;
     try{
-      const result=await localWasteAI.classify(file);
-      const cat=document.getElementById("cat"),item=document.getElementById("itemType"),notes=document.getElementById("notes");
-      if(cat)cat.value=result.category||"e-waste";
-      if(item)item.value=result.itemType||"E-waste item";
-      if(notes)notes.value=result.notes||"";
-      cat?.dispatchEvent(new Event("input"));
-      document.getElementById("weight")?.dispatchEvent(new Event("input"));
-      const pct=Math.round(Number(result.confidence||0)*100);
-      if(state)state.textContent=tr("photoReady")+" · "+result.itemType+" · "+pct+"% · Offline";
-      toast("✓ "+tr("photoReady"));
+      await putMedia(taskId,file,{kind:"image_analysis",mimeType:file.type||"image/jpeg"});
+      await enqueue({id:taskId,type:"image_analysis",data:{taskId}});
+      if(navigator.onLine){
+        await processImageTask(taskId);
+      }else{
+        toast("📷 Pending local save — image queued");
+      }
     }catch(err){
-      console.error("Offline AI:",err);
-      if(state)state.textContent=err.message||tr("photoError");
-      toast(err.message||tr("photoError"));
-    }finally{
-      if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}
-    }
+      console.error(err); if(state)state.textContent="Could not save photo locally."; toast("Photo queue failed: "+err.message);
+    }finally{if(btn)btn.disabled=false;}
   }
-
-  function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><div class="offline-ai-install"><input id="aiModelFile" type="file" accept=".tflite,application/octet-stream" hidden><button type="button" class="secondary" id="installAiModel">Install offline AI model</button><span id="aiModelState">Checking offline model…</span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+  async function processImageTask(taskId){
+    const media=await getMedia(taskId); if(!media?.blob)throw new Error("Queued image not found");
+    const dataUrl=await readDataUrl(media.blob);
+    const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl}),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Gemini image analysis failed");
+    const result=data.result||{};
+    const applied=applyAiResult(result);
+    await putState("lastAiResult",{taskId,result,applied,completedAt:Date.now()});
+    await removeOutbox(taskId).catch(()=>{});
+    await removeMedia(taskId).catch(()=>{});
+    const state=document.getElementById("photoState");
+    if(state)state.textContent=(applied.category||applied.itemType)?"✓ AI result synced — "+applied.itemType+(Number.isFinite(applied.confidence)? " · "+Math.round(applied.confidence*100)+"%":""):"✓ AI analyzed";
+    toast("✓ Gemini analysis complete"+(applied.itemType?" — "+applied.itemType:""));
+    return result;
+  }
+  async function predictPriceFromForm(){
+    const category=document.getElementById("cat")?.value.trim(),itemType=document.getElementById("itemType")?.value.trim();
+    const weightText=document.getElementById("weight")?.value.trim(),condition=document.getElementById("cond")?.value||"unknown";
+    const weightKgValue=weightKg(weightText);
+    const state=document.getElementById("pricePredictState"),btn=document.getElementById("predictPrice");
+    const taskId="price:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    const params={category,itemType,weightKg:weightKgValue,condition,location:profile?.area||"India"};
+    if(!category||!weightKgValue){toast("Enter category and weight first.");return;}
+    if(state)state.textContent=navigator.onLine?"Predicting…":"Pending local save — will sync when online…";
+    if(btn)btn.disabled=true;
+    try{
+      await enqueue({id:taskId,type:"price_prediction",data:{taskId,params}});
+      if(navigator.onLine)await processPriceTask(taskId,params);
+      else toast("₹ Price prediction queued for sync");
+    }catch(err){console.error(err);toast("Price prediction queue failed: "+err.message);}
+    finally{if(btn)btn.disabled=false;}
+  }
+  async function processPriceTask(taskId,params){
+    const response=await fetch("/api/predict-price",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(params),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Price prediction failed");
+    const result=data.result||{};
+    const price=Number(result.estimatedPrice||0);
+    if(price>0){const el=document.getElementById("askingPrice");if(el){el.value=Math.round(price);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}}
+    await putState("lastPricePrediction",{taskId,params,result,completedAt:Date.now()});
+    await removeOutbox(taskId).catch(()=>{});
+    const state=document.getElementById("pricePredictState");if(state)state.textContent=price>0?"✓ Price synced: ₹"+Math.round(price):"✓ Prediction synced";
+    toast(price>0?"✓ Gemini price estimate: ₹"+Math.round(price):"✓ Price prediction complete");
+    return result;
+  }
+function listScreen(){
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><div class="photo-source-actions"><button type="button" class="secondary" id="takePhoto">📷 '+tr("takePhoto")+'</button><button type="button" class="secondary" id="galleryPhoto">🖼 '+tr("galleryPhoto")+'</button></div><label class="photo-drop" id="photoDrop"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapCamera" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><input id="scrapGallery" type="file" accept="image/*" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><div class="price-ai-actions"><button type="button" class="secondary" id="predictPrice">🤖 Predict price with AI</button><span id="pricePredictState"></span></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
     const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
     document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
-    const photoInput=document.getElementById("scrapPhoto"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto"),modelInput=document.getElementById("aiModelFile"),installModelBtn=document.getElementById("installAiModel"),modelState=document.getElementById("aiModelState");
-    const setPhoto=()=>{const file=photoInput.files?.[0];if(!file)return;photoPreview.src=URL.createObjectURL(file);photoWrap.hidden=false;photoDrop.hidden=true;localWasteAI.hasModel().then(installed=>{analyzeBtn.disabled=!installed;if(installed)analyzeScrapPhoto(file);else document.getElementById("photoState").textContent="Install the offline AI model below, then tap Analyze photo.";});};
-    const refreshAiModelState=async()=>{
-      const installed=await localWasteAI.hasModel();
-      if(modelState)modelState.textContent=installed?"Offline model installed ✓":"Install the supplied .tflite model once on this device.";
-      if(analyzeBtn)analyzeBtn.disabled=!installed || !photoInput.files?.[0];
-    };
-    refreshAiModelState();
-    photoInput.onchange=setPhoto;
-    document.getElementById("changePhoto").onclick=()=>photoInput.click();
-    if(installModelBtn&&modelInput){
-      installModelBtn.onclick=()=>modelInput.click();
-      modelInput.onchange=async()=>{
-        const file=modelInput.files?.[0]; if(!file)return;
-        installModelBtn.disabled=true;
-        if(modelState)modelState.textContent="Installing offline AI model…";
-        try{
-          const info=await localWasteAI.installModel(file);
-          if(modelState)modelState.textContent="Offline model installed ✓ ("+Math.round(info.size/1024/1024*10)/10+" MB)";
-          if(photoInput.files?.[0])analyzeBtn.disabled=false;
-          toast("✓ Offline AI model installed");
-        }catch(err){
-          console.error(err);
-          if(modelState)modelState.textContent=err.message||"Model installation failed.";
-          toast(err.message||"Model installation failed.");
-        }finally{
-          installModelBtn.disabled=false;
-          modelInput.value="";
-        }
-      };
-    }
+    const galleryInput=document.getElementById("scrapGallery"),cameraInput=document.getElementById("scrapCamera"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto");
+    let selectedPhoto=null;
+    const setPhoto=(file)=>{if(!file)return;selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoWrap.hidden=false;photoDrop.hidden=true;analyzeBtn.disabled=false;document.getElementById("photoState").textContent="";analyzeScrapPhoto(file);};
+    galleryInput.onchange=()=>setPhoto(galleryInput.files?.[0]);
+    cameraInput.onchange=()=>setPhoto(cameraInput.files?.[0]);
+    document.getElementById("takePhoto").onclick=()=>cameraInput.click();
+    document.getElementById("predictPrice").onclick=predictPriceFromForm;
+    document.getElementById("galleryPhoto").onclick=()=>galleryInput.click();
+    document.getElementById("changePhoto").onclick=()=>galleryInput.click();
+    photoDrop.onclick=()=>galleryInput.click();
     photoDrop.ondragover=e=>{e.preventDefault();photoDrop.classList.add("dragging");};
     photoDrop.ondragleave=()=>photoDrop.classList.remove("dragging");
-    photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file){const dt=new DataTransfer();dt.items.add(file);photoInput.files=dt.files;setPhoto();}};
-    analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);
+    photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file)setPhoto(file);};
+    analyzeBtn.onclick=()=>analyzeScrapPhoto(selectedPhoto);
+    getState("lastAiResult").then(x=>{if(x?.result&&Date.now()-Number(x.completedAt||0)<30*60*1000)try{applyAiResult(x.result);}catch{};}).catch(()=>{});
+    getState("lastPricePrediction").then(x=>{if(x?.result&&Date.now()-Number(x.completedAt||0)<30*60*1000){const p=Number(x.result.estimatedPrice||0),el=document.getElementById("askingPrice");if(p>0&&el){el.value=Math.round(p);el.dispatchEvent(new Event("input",{bubbles:true}));}}}).catch(()=>{});
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),lotReference:"LOT-"+Date.now().toString(36).toUpperCase(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,collectedAt:new Date().toISOString(),rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
         lotReference:r.lotReference,collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
         address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice
-      }}).catch(()=>{});const file=photoInput.files?.[0];syncBackendLot(r).then(()=>uploadLotPhoto(r,file)).then(()=>{save();syncPending();});toast(tr("pickupCreated"));syncPending();go("requests");};
+      }}).catch(()=>{});const file=selectedPhoto;syncBackendLot(r).then(()=>uploadLotPhoto(r,file)).then(()=>{save();syncPending();});toast(tr("pickupCreated"));syncPending();go("requests");};
   }
+  
   function requestsScreen(){
     cleanDemoRequests(); normalizePricing();
     loadSharedRequests({rerender:true});
@@ -698,17 +773,84 @@ document.addEventListener("DOMContentLoaded", () => {
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
+  async function startRecordedVoice(){
+    const state=document.getElementById("listenState"),mic=document.getElementById("mic");
+    if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){
+      if(state)state.textContent="Voice input is not supported by this browser.";
+      return toast("Voice input is not supported here. Use Chrome/Android or type the details.");
+    }
+    if(voiceRecorder&&voiceRecorder.state==="recording"){voiceRecorder.stop();return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      voiceChunks=[];
+      const mime=["audio/webm;codecs=opus","audio/webm","audio/mp4"].find(x=>MediaRecorder.isTypeSupported?.(x))||"";
+      voiceRecorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+      const started=Date.now();
+      if(state)state.textContent="Listening… speak your scrap details";
+      if(mic)mic.classList.add("recording");
+      voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceChunks.push(e.data);};
+      voiceRecorder.onstop=async()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        if(mic)mic.classList.remove("recording");
+        if(state)state.textContent="Processing voice…";
+        const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||mime||"audio/webm"});
+        voiceRecorder=null;
+        if(blob.size<1000){if(state)state.textContent="No voice was captured.";return toast("No voice was captured. Tap the mic and speak clearly.");}
+        try{
+          const dataUrl=await readDataUrl(blob);
+          const response=await fetch("/api/transcribe-voice",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({audio:dataUrl,mimeType:blob.type})});
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data.error||data.detail||"Voice transcription failed.");
+          const spoken=String(data.text||"").trim();
+          if(!spoken)throw new Error("No speech was detected.");
+          parseVoice(spoken);
+          if(state)state.textContent="✓ Voice captured";
+          toast("✓ Voice details added to the form");
+        }catch(err){
+          console.error(err);
+          if(state)state.textContent=err.message||"Voice input failed.";
+          toast(err.message||"Voice input failed. Please try again.");
+        }
+      };
+      voiceRecorder.start();
+      setTimeout(()=>{if(voiceRecorder&&voiceRecorder.state==="recording"&&Date.now()-started>=1000)voiceRecorder.stop();},8000);
+    }catch(err){
+      console.error(err);
+      if(mic)mic.classList.remove("recording");
+      if(state)state.textContent="Microphone permission is required.";
+      toast("Allow microphone permission and try again.");
+    }
+  }
   function startVoice(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR)return toast(tr("voiceUnsupported"));
+    if(!SR)return startRecordedVoice();
     if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
-    recognition=new SR();recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
-    const state=document.getElementById("listenState"), mic=document.getElementById("mic");
+    recognition=new SR();
+    recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";
+    recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
+    const state=document.getElementById("listenState"),mic=document.getElementById("mic");
+    let completed=false;
     recognition.onstart=()=>{if(state)state.textContent=tr("listening");if(mic)mic.classList.add("recording");};
-    recognition.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";parseVoice(text.trim());};
-    recognition.onerror=()=>{if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
-    recognition.onend=()=>{if(state)state.textContent="";if(mic)mic.classList.remove("recording");recognition=null;};
-    try{recognition.start();}catch(e){toast(tr("voiceError"));recognition=null;}
+    recognition.onresult=e=>{
+      let text="";
+      for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";
+      text=text.trim();
+      if(text){completed=true;parseVoice(text);}
+    };
+    recognition.onerror=e=>{
+      console.warn("Speech recognition error",e?.error);
+      if(mic)mic.classList.remove("recording");
+      try{recognition.stop();}catch{}
+      recognition=null;
+      if(!completed && ["not-allowed","service-not-allowed","network","audio-capture","no-speech"].includes(e?.error))startRecordedVoice();
+      else if(!completed){if(state)state.textContent="Voice input failed.";toast("Voice input failed. Tap the mic and try again.");}
+    };
+    recognition.onend=()=>{
+      if(state&&!completed)state.textContent="";
+      if(mic)mic.classList.remove("recording");
+      recognition=null;
+    };
+    try{recognition.start();}catch(e){recognition=null;startRecordedVoice();}
   }
   function parseVoice(text){
     const raw=normalizeDigits(text), low=raw.toLowerCase();
