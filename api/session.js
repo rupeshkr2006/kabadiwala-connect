@@ -44,8 +44,10 @@ export default async function handler(req,res){
 
     const persistedRole=await registeredRole(clean);
     const requestedRole=role==="recycler"?"recycler":role==="admin"?"admin":"collector";
-    const sessionRole=persistedRole||requestedRole;
-    if(requestedRole==="admin"&&persistedRole!=="admin")return res.status(403).json({error:"This account is not an admin."});
+    const configuredAdmin=String(process.env.ADMIN_PHONE||"9990000000").replace(/\D/g,"");
+    const isAdminAccount=persistedRole==="admin"||clean===configuredAdmin;
+    if(requestedRole==="admin"&&!isAdminAccount)return res.status(403).json({error:"This account is not an admin."});
+    const sessionRole=requestedRole==="admin"?"admin":(persistedRole||requestedRole);
 
     const p={phone:clean,role:sessionRole,iat:Date.now(),exp:Date.now()+maxAge*1000};
     res.setHeader("Set-Cookie",cookie(tokenFor(p)));
