@@ -100,3 +100,6 @@
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+.photo-source-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 8px}.photo-source-actions button{width:100%;min-height:46px}.photo-source-actions button:active{transform:scale(.98)}
+@media(max-width:560px){.photo-source-actions{grid-template-columns:1fr 1fr;gap:8px}.photo-source-actions button{font-size:.9rem;padding:10px 8px}}
