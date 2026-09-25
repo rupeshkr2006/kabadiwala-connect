@@ -493,9 +493,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
     try{
       const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.detail?`${data.error||"AI analysis failed"}: ${data.detail}`:(data.error||"AI analysis failed"));
-      const result=data.result||{};
+      let result=null;
+      if(window.Capacitor?.Plugins?.WasteClassifier){
+        result=await window.Capacitor.Plugins.WasteClassifier.classify({imageData:dataUrl});
+      }else{
+        const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.detail?(data.error||"AI analysis failed")+": "+data.detail:(data.error||"AI analysis failed"));
+        result=data.result||{};
+      }
       if(result.category)document.getElementById("cat").value=result.category;
       if(result.itemType)document.getElementById("itemType").value=result.itemType;
       if(result.condition){const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;}
@@ -503,10 +509,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("cat").dispatchEvent(new Event("input"));document.getElementById("weight").dispatchEvent(new Event("input"));
       if(state)state.textContent=tr("photoReady")+(result.confidence?" · "+Math.round(Number(result.confidence)*100)+"%":"");
       toast("✓ "+tr("photoReady"));
-    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(tr("photoError"));}
+    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(err?.message?tr("photoError")+": "+err.message:tr("photoError"));}
     finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
-  }
-  function listScreen(){
+  }function listScreen(){
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
     const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
