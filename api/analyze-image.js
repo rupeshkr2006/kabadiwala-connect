@@ -31,7 +31,7 @@ Do not identify people. Do not invent weight or price. If the material cannot be
     // fall back to the other stable Flash models instead of making the user retry.
     // Prefer the lightweight multimodal model for this simple classification task.
     // Google documents Flash-Lite as supporting image input and structured JSON output.
-    const models = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"];
+    const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
     let upstream = null;
     let payload = {};
     let lastStatus = 502;
