@@ -495,14 +495,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try{
       const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
       let result=null;
-      if(!navigator.onLine)throw new Error("Image analysis needs internet because Gemini AI is online. The photo itself can still be selected offline.");
-      {
-
-        const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok)throw new Error(data.detail?(data.error||"AI analysis failed")+": "+data.detail:(data.error||"AI analysis failed"));
-        result=data.result||{};
-      }
+      if(!navigator.onLine)throw new Error("Image analysis needs internet because Gemini AI is online. The photo can be selected while offline, but analysis will run when the connection is restored.");
+      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl}),credentials:"same-origin"});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.detail?(data.error||"AI analysis failed")+": "+data.detail:(data.error||"AI analysis failed"));
+      result=data.result||{};
 
       // Put every value returned by the AI into the matching form field.
       // Do not invent weight/price/condition when the model did not return them.
