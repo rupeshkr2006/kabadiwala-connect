@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"Indicative market rate", minimumPrice:"Minimum expected price", estimated:"Estimated value", itemType:"Item / type", askingPrice:"Your asking price", expectedPrice:"Expected price", currentOffer:"Current offer",
       counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
       counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
-      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the matching fields below.", uploadPhoto:"Upload scrap photo", uploadHint:"Choose a photo from your gallery or take a new photo.", takePhoto:"Take Photo", galleryPhoto:"Choose from Gallery", aiFieldsFilled:"AI fields filled", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
+      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the matching fields below.", uploadPhoto:"Upload scrap photo", uploadHint:"Choose a photo from your gallery or take a new photo.", takePhoto:"Take Photo", galleryPhoto:"Choose from Gallery", aiFieldsFilled:"AI fields filled", aiNoFields:"AI result did not contain a classified item", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
 
     },
     hi: {
@@ -506,23 +506,32 @@ document.addEventListener("DOMContentLoaded", () => {
       // Put every value returned by the AI into the matching form field.
       // Do not invent weight/price/condition when the model did not return them.
       const setValue=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined&&value!==null&&String(value).trim()!==""){el.value=String(value);el.dispatchEvent(new Event("input",{bubbles:true}));}};
-      const detectedItem=result.itemType||result.label||result.predictedLabel||result.className||result.prediction||"";
-      const detectedMaterial=result.category||result.material||result.materialCategory||(detectedItem?"e-waste":"");
-      setValue("cat",detectedMaterial);
-      setValue("itemType",detectedItem);
-      if(result.weight)setValue("weight",result.weight);
-      if(result.askingPrice||result.expectedPrice||result.price)setValue("askingPrice",result.askingPrice||result.expectedPrice||result.price);
-      if(result.condition){
-        const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");
+      // Capacitor versions/providers can return the plugin payload directly or nested.
+      const payload=(result&&typeof result==="object"&&(result.value||result.data||result.result))||result||{};
+      const LABELS=["Battery","Cable","Keyboard","Microwave","Mobile","Mouse","PCB","Player","Printer","Television","Washing Machine"];
+      const rawIndex=payload.labelIndex!==undefined?Number(payload.labelIndex):-1;
+      const indexedLabel=Number.isInteger(rawIndex)&&rawIndex>=0&&rawIndex<LABELS.length?LABELS[rawIndex]:"";
+      const detectedItem=String(payload.itemType||payload.label||payload.predictedLabel||payload.className||payload.prediction||payload.detectedItem||indexedLabel||"").trim();
+      const detectedMaterial=String(payload.category||payload.material||payload.materialCategory||(detectedItem?"e-waste":"")).trim();
+      // Write directly to the actual inputs and verify immediately.
+      const categoryInput=document.getElementById("cat");
+      const itemInput=document.getElementById("itemType");
+      if(categoryInput&&detectedMaterial){categoryInput.value=detectedMaterial;categoryInput.setAttribute("value",detectedMaterial);categoryInput.dispatchEvent(new Event("input",{bubbles:true}));}
+      if(itemInput&&detectedItem){itemInput.value=detectedItem;itemInput.setAttribute("value",detectedItem);itemInput.dispatchEvent(new Event("input",{bubbles:true}));}
+      if(payload.weight!==undefined)setValue("weight",payload.weight);
+      if(payload.askingPrice||payload.expectedPrice||payload.price)setValue("askingPrice",payload.askingPrice||payload.expectedPrice||payload.price);
+      if(payload.condition){
+        const x=String(payload.condition).toLowerCase(),el=document.getElementById("cond");
         if(el)el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;
       }
-      if(result.notes)setValue("notes",result.notes);
+      if(payload.notes)setValue("notes",payload.notes);
 
       // Keep the detected e-waste class visible even when a backend returns only a label.
-      if(!result.category && result.itemType)setValue("cat","e-waste");
-      const confidence=Number(result.confidence);
-      if(state)state.textContent=tr("photoReady")+(Number.isFinite(confidence)?" · "+Math.round(confidence*100)+"%":"")+" · "+tr("aiFieldsFilled");
-      toast("✓ "+tr("photoReady")+" — "+tr("aiFieldsFilled"));
+      if(!detectedMaterial && detectedItem&&categoryInput){categoryInput.value="e-waste";categoryInput.setAttribute("value","e-waste");categoryInput.dispatchEvent(new Event("input",{bubbles:true}));}
+      const confidence=Number(payload.confidence);
+      const verifiedCategory=categoryInput?.value||""; const verifiedItem=itemInput?.value||"";
+      if(state)state.textContent=(verifiedCategory||verifiedItem)?tr("photoReady")+" · "+verifiedItem+(Number.isFinite(confidence)?" · "+Math.round(confidence*100)+"%":"")+" · "+tr("aiFieldsFilled"):tr("photoReady")+" · "+tr("aiNoFields");
+      toast((verifiedCategory||verifiedItem)?"✓ "+tr("photoReady")+" — "+verifiedItem:"✓ "+tr("photoReady")+" — "+tr("aiNoFields"));
     }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(err?.message?tr("photoError")+": "+err.message:tr("photoError"));}
     finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
   }function listScreen(){
