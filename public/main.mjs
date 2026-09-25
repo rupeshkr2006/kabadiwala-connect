@@ -259,6 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
     return data;
   }
+
   async function apiGet(action){
     await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{credentials:"same-origin",cache:"no-store"});
