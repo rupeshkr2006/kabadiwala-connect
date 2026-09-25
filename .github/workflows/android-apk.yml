@@ -35,46 +35,6 @@ jobs:
           mkdir -p www
           cp -R public/. www/
 
-      - name: Require bundled e-waste model
-        run: |
-          test -f android-model/ewaste_mobilenetv2_fp16.tflite
-          test "$(stat -c%s android-model/ewaste_mobilenetv2_fp16.tflite)" -gt 1000000
-          echo "Bundled model size: $(stat -c%s android-model/ewaste_mobilenetv2_fp16.tflite) bytes"
-
-      - name: Add Android platform
-        run: npx cap add android
-
-      - name: Install native classifier
-        run: |
-          mkdir -p android/app/src/main/java/com/kabadiwalaconnect/app
-          cp android-native/WasteClassifierPlugin.java android/app/src/main/java/com/kabadiwalaconnect/app/WasteClassifierPlugin.java
-          mkdir -p android/app/src/main/assets
-          cp android-model/ewaste_mobilenetv2_fp16.tflite android/app/src/main/assets/ewaste_mobilenetv2_fp16.tflite
-
-      - name: Configure TensorFlow Lite runtime and plugin registration
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          gradle = Path("android/app/build.gradle")
-          s = gradle.read_text()
-          dep = 'implementation "org.tensorflow:tensorflow-lite:2.17.0"'
-          if dep not in s:
-              marker = "dependencies {"
-              s = s.replace(marker, marker + "\n    " + dep, 1)
-          gradle.write_text(s)
-
-          main = Path("android/app/src/main/java/com/kabadiwalaconnect/app/MainActivity.java")
-          s = main.read_text()
-          if "WasteClassifierPlugin" not in s:
-              s = s.replace("import com.getcapacitor.BridgeActivity;", "import com.getcapacitor.BridgeActivity;\nimport com.kabadiwalaconnect.app.WasteClassifierPlugin;")
-              s = s.replace(
-                  "public class MainActivity extends BridgeActivity {",
-                  "public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        registerPlugin(WasteClassifierPlugin.class);\n    }"
-              )
-          main.write_text(s)
-          PY
-
       - name: Sync Capacitor
         run: npx cap sync android
 
