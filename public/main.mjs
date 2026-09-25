@@ -338,9 +338,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const items=await getOutbox().catch(()=>[]);
     if(!items.length)return;
     try{
-      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:items})});
-      if(!response.ok)return;
+      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:items}),credentials:"same-origin"});
       const data=await response.json().catch(()=>({}));
+      if(!response.ok)return;
       for(const item of items){
         if((data.results||[]).some(x=>x.id===item.id)) await removeOutbox(item.id).catch(()=>{});
       }
@@ -494,9 +494,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try{
       const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
       let result=null;
-      if(window.Capacitor?.Plugins?.WasteClassifier){
-        result=await window.Capacitor.Plugins.WasteClassifier.classify({imageData:dataUrl});
-      }else{
+      if(!navigator.onLine)throw new Error("Image analysis needs internet because Gemini AI is online. The photo itself can still be selected offline.");
+      {
+
         const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
         const data=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(data.detail?(data.error||"AI analysis failed")+": "+data.detail:(data.error||"AI analysis failed"));
