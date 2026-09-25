@@ -1,4 +1,5 @@
 import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+import { localWasteAI } from "./offline-ai.mjs";
 
 /* production build marker: admin verification */
 document.addEventListener("DOMContentLoaded", () => {
@@ -493,29 +494,61 @@ document.addEventListener("DOMContentLoaded", () => {
     if(state)state.textContent=tr("analyzingPhoto");
     if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
     try{
-      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.detail?`${data.error||"AI analysis failed"}: ${data.detail}`:(data.error||"AI analysis failed"));
-      const result=data.result||{};
-      if(result.category)document.getElementById("cat").value=result.category;
-      if(result.itemType)document.getElementById("itemType").value=result.itemType;
-      if(result.condition){const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;}
-      if(result.notes)document.getElementById("notes").value=result.notes;
-      document.getElementById("cat").dispatchEvent(new Event("input"));document.getElementById("weight").dispatchEvent(new Event("input"));
-      if(state)state.textContent=tr("photoReady")+(result.confidence?" · "+Math.round(Number(result.confidence)*100)+"%":"");
+      const result=await localWasteAI.classify(file);
+      const cat=document.getElementById("cat"),item=document.getElementById("itemType"),notes=document.getElementById("notes");
+      if(cat)cat.value=result.category||"e-waste";
+      if(item)item.value=result.itemType||"E-waste item";
+      if(notes)notes.value=result.notes||"";
+      cat?.dispatchEvent(new Event("input"));
+      document.getElementById("weight")?.dispatchEvent(new Event("input"));
+      const pct=Math.round(Number(result.confidence||0)*100);
+      if(state)state.textContent=tr("photoReady")+" · "+result.itemType+" · "+pct+"% · Offline";
       toast("✓ "+tr("photoReady"));
-    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(tr("photoError"));}
-    finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
+    }catch(err){
+      console.error("Offline AI:",err);
+      if(state)state.textContent=err.message||tr("photoError");
+      toast(err.message||tr("photoError"));
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}
+    }
   }
+
   function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><div class="offline-ai-install"><input id="aiModelFile" type="file" accept=".tflite,application/octet-stream" hidden><button type="button" class="secondary" id="installAiModel">Install offline AI model</button><span id="aiModelState">Checking offline model…</span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
     const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
     document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
-    const photoInput=document.getElementById("scrapPhoto"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto");
+    const photoInput=document.getElementById("scrapPhoto"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto"),modelInput=document.getElementById("aiModelFile"),installModelBtn=document.getElementById("installAiModel"),modelState=document.getElementById("aiModelState");
     const setPhoto=()=>{const file=photoInput.files?.[0];if(!file)return;photoPreview.src=URL.createObjectURL(file);photoWrap.hidden=false;photoDrop.hidden=true;analyzeBtn.disabled=false;document.getElementById("photoState").textContent="";analyzeScrapPhoto(file);};
+    const refreshAiModelState=async()=>{
+      const installed=await localWasteAI.hasModel();
+      if(modelState)modelState.textContent=installed?"Offline model installed ✓":"Install the supplied .tflite model once on this device.";
+      if(analyzeBtn)analyzeBtn.disabled=!installed || !photoInput.files?.[0];
+    };
+    refreshAiModelState();
     photoInput.onchange=setPhoto;
     document.getElementById("changePhoto").onclick=()=>photoInput.click();
+    if(installModelBtn&&modelInput){
+      installModelBtn.onclick=()=>modelInput.click();
+      modelInput.onchange=async()=>{
+        const file=modelInput.files?.[0]; if(!file)return;
+        installModelBtn.disabled=true;
+        if(modelState)modelState.textContent="Installing offline AI model…";
+        try{
+          const info=await localWasteAI.installModel(file);
+          if(modelState)modelState.textContent="Offline model installed ✓ ("+Math.round(info.size/1024/1024*10)/10+" MB)";
+          if(photoInput.files?.[0])analyzeBtn.disabled=false;
+          toast("✓ Offline AI model installed");
+        }catch(err){
+          console.error(err);
+          if(modelState)modelState.textContent=err.message||"Model installation failed.";
+          toast(err.message||"Model installation failed.");
+        }finally{
+          installModelBtn.disabled=false;
+          modelInput.value="";
+        }
+      };
+    }
     photoDrop.ondragover=e=>{e.preventDefault();photoDrop.classList.add("dragging");};
     photoDrop.ondragleave=()=>photoDrop.classList.remove("dragging");
     photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file){const dt=new DataTransfer();dt.items.add(file);photoInput.files=dt.files;setPhoto();}};
