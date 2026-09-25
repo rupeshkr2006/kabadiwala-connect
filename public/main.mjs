@@ -1,4 +1,4 @@
-import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+import { putState, getState, enqueue, getOutbox, removeOutbox, putMedia, getMedia, removeMedia } from "./offline-db.mjs";
 
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
@@ -487,74 +487,84 @@ document.addEventListener("DOMContentLoaded", () => {
   function requestCard(r){
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
+  function applyAiResult(result){
+    const payload=(result&&typeof result==="object"&&(result.value||result.data||result.result))||result||{};
+    const setValue=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined&&value!==null&&String(value).trim()!==""){el.value=String(value);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}};
+    const category=String(payload.category||payload.material||payload.materialCategory||"").trim();
+    const item=String(payload.itemType||payload.label||payload.predictedLabel||payload.className||payload.prediction||"").trim();
+    if(category)setValue("cat",category);
+    if(item)setValue("itemType",item);
+    if(payload.weight!==undefined)setValue("weight",payload.weight);
+    if(payload.askingPrice!==undefined)setValue("askingPrice",payload.askingPrice);
+    else if(payload.expectedPrice!==undefined)setValue("askingPrice",payload.expectedPrice);
+    else if(payload.price!==undefined)setValue("askingPrice",payload.price);
+    if(payload.condition){const el=document.getElementById("cond"),x=String(payload.condition).toLowerCase();if(el){el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;el.dispatchEvent(new Event("change",{bubbles:true}));}}
+    if(payload.notes)setValue("notes",payload.notes);
+    return {category:document.getElementById("cat")?.value||"",itemType:document.getElementById("itemType")?.value||"",confidence:Number(payload.confidence)};
+  }
   async function analyzeScrapPhoto(file){
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
-    if(state)state.textContent=tr("analyzingPhoto");
-    if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
+    const taskId="image:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    if(state)state.textContent=navigator.onLine?"Analyzing with Gemini…":"Pending local save — will sync when online…";
+    if(btn)btn.disabled=true;
     try{
-      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-      let result=null;
-      if(!navigator.onLine)throw new Error("Image analysis needs internet because Gemini AI is online. The photo can be selected while offline, but analysis will run when the connection is restored.");
-      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl}),credentials:"same-origin"});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.detail?(data.error||"AI analysis failed")+": "+data.detail:(data.error||"AI analysis failed"));
-      result=data.result||{};
-
-      // Put every value returned by the AI into the matching form field.
-      // Do not invent weight/price/condition when the model did not return them.
-      const setValue=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined&&value!==null&&String(value).trim()!==""){el.value=String(value);el.dispatchEvent(new Event("input",{bubbles:true}));}};
-      // Capacitor versions/providers can return the plugin payload directly or nested.
-      const payload=(result&&typeof result==="object"&&(result.value||result.data||result.result))||result||{};
-      const LABELS=["Battery","Cable","Keyboard","Microwave","Mobile","Mouse","PCB","Player","Printer","Television","Washing Machine"];
-      const rawIndex=payload.labelIndex!==undefined?Number(payload.labelIndex):-1;
-      const indexedLabel=Number.isInteger(rawIndex)&&rawIndex>=0&&rawIndex<LABELS.length?LABELS[rawIndex]:"";
-      const detectedItem=String(payload.itemType||payload.label||payload.predictedLabel||payload.className||payload.prediction||payload.detectedItem||indexedLabel||"").trim();
-      const detectedMaterial=String(payload.category||payload.material||payload.materialCategory||(detectedItem?"e-waste":"")).trim();
-      // Write directly to the actual inputs and verify immediately.
-      const categoryInput=document.getElementById("cat");
-      const itemInput=document.getElementById("itemType");
-      if(categoryInput&&detectedMaterial){categoryInput.value=detectedMaterial;categoryInput.setAttribute("value",detectedMaterial);categoryInput.dispatchEvent(new Event("input",{bubbles:true}));}
-      if(itemInput&&detectedItem){itemInput.value=detectedItem;itemInput.setAttribute("value",detectedItem);itemInput.dispatchEvent(new Event("input",{bubbles:true}));}
-      if(payload.weight!==undefined)setValue("weight",payload.weight);
-      if(payload.askingPrice||payload.expectedPrice||payload.price)setValue("askingPrice",payload.askingPrice||payload.expectedPrice||payload.price);
-      if(payload.condition){
-        const x=String(payload.condition).toLowerCase(),el=document.getElementById("cond");
-        if(el)el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;
+      await putMedia(taskId,file,{kind:"image_analysis",mimeType:file.type||"image/jpeg"});
+      await enqueue({id:taskId,type:"image_analysis",data:{taskId}});
+      if(navigator.onLine){
+        await processImageTask(taskId);
+      }else{
+        toast("📷 Pending local save — image queued");
       }
-      if(payload.notes)setValue("notes",payload.notes);
-
-      // Keep the detected e-waste class visible even when a backend returns only a label.
-      if(!detectedMaterial && detectedItem&&categoryInput){categoryInput.value="e-waste";categoryInput.setAttribute("value","e-waste");categoryInput.dispatchEvent(new Event("input",{bubbles:true}));}
-      const confidence=Number(payload.confidence);
-      const verifiedCategory=categoryInput?.value||""; const verifiedItem=itemInput?.value||"";
-      if(state)state.textContent=(verifiedCategory||verifiedItem)?tr("photoReady")+" · "+verifiedItem+(Number.isFinite(confidence)?" · "+Math.round(confidence*100)+"%":"")+" · "+tr("aiFieldsFilled"):tr("photoReady")+" · "+tr("aiNoFields");
-      toast((verifiedCategory||verifiedItem)?"✓ "+tr("photoReady")+" — "+verifiedItem:"✓ "+tr("photoReady")+" — "+tr("aiNoFields"));
-    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(err?.message?tr("photoError")+": "+err.message:tr("photoError"));}
-    finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
-  }function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><div class="photo-source-actions"><button type="button" class="secondary" id="takePhoto">📷 '+tr("takePhoto")+'</button><button type="button" class="secondary" id="galleryPhoto">🖼 '+tr("galleryPhoto")+'</button></div><label class="photo-drop" id="photoDrop"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapCamera" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><input id="scrapGallery" type="file" accept="image/*" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
-    bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
-    const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
-    document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
-    const galleryInput=document.getElementById("scrapGallery"),cameraInput=document.getElementById("scrapCamera"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto");
-    let selectedPhoto=null;
-    const setPhoto=(file)=>{if(!file)return;selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoWrap.hidden=false;photoDrop.hidden=true;analyzeBtn.disabled=false;document.getElementById("photoState").textContent="";analyzeScrapPhoto(file);};
-    galleryInput.onchange=()=>setPhoto(galleryInput.files?.[0]);
-    cameraInput.onchange=()=>setPhoto(cameraInput.files?.[0]);
-    document.getElementById("takePhoto").onclick=()=>cameraInput.click();
-    document.getElementById("galleryPhoto").onclick=()=>galleryInput.click();
-    document.getElementById("changePhoto").onclick=()=>galleryInput.click();
-    photoDrop.onclick=()=>galleryInput.click();
-    photoDrop.ondragover=e=>{e.preventDefault();photoDrop.classList.add("dragging");};
-    photoDrop.ondragleave=()=>photoDrop.classList.remove("dragging");
-    photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file)setPhoto(file);};
-    analyzeBtn.onclick=()=>analyzeScrapPhoto(selectedPhoto);
-    document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
-    document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),lotReference:"LOT-"+Date.now().toString(36).toUpperCase(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,collectedAt:new Date().toISOString(),rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
-        lotReference:r.lotReference,collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
-        address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice
-      }}).catch(()=>{});const file=photoInput.files?.[0];syncBackendLot(r).then(()=>uploadLotPhoto(r,file)).then(()=>{save();syncPending();});toast(tr("pickupCreated"));syncPending();go("requests");};
+    }catch(err){
+      console.error(err); if(state)state.textContent="Could not save photo locally."; toast("Photo queue failed: "+err.message);
+    }finally{if(btn)btn.disabled=false;}
+  }
+  async function processImageTask(taskId){
+    const media=await getMedia(taskId); if(!media?.blob)throw new Error("Queued image not found");
+    const dataUrl=await readDataUrl(media.blob);
+    const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl}),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Gemini image analysis failed");
+    const result=data.result||{};
+    const applied=applyAiResult(result);
+    await putState("lastAiResult",{taskId,result,applied,completedAt:Date.now()});
+    await removeOutbox(taskId).catch(()=>{});
+    await removeMedia(taskId).catch(()=>{});
+    const state=document.getElementById("photoState");
+    if(state)state.textContent=(applied.category||applied.itemType)?"✓ AI result synced — "+applied.itemType+(Number.isFinite(applied.confidence)? " · "+Math.round(applied.confidence*100)+"%":""):"✓ AI analyzed";
+    toast("✓ Gemini analysis complete"+(applied.itemType?" — "+applied.itemType:""));
+    return result;
+  }
+  async function predictPriceFromForm(){
+    const category=document.getElementById("cat")?.value.trim(),itemType=document.getElementById("itemType")?.value.trim();
+    const weightText=document.getElementById("weight")?.value.trim(),condition=document.getElementById("cond")?.value||"unknown";
+    const weightKgValue=weightKg(weightText);
+    const state=document.getElementById("pricePredictState"),btn=document.getElementById("predictPrice");
+    const taskId="price:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    const params={category,itemType,weightKg:weightKgValue,condition,location:profile?.area||"India"};
+    if(!category||!weightKgValue){toast("Enter category and weight first.");return;}
+    if(state)state.textContent=navigator.onLine?"Predicting…":"Pending local save — will sync when online…";
+    if(btn)btn.disabled=true;
+    try{
+      await enqueue({id:taskId,type:"price_prediction",data:{taskId,params}});
+      if(navigator.onLine)await processPriceTask(taskId,params);
+      else toast("₹ Price prediction queued for sync");
+    }catch(err){console.error(err);toast("Price prediction queue failed: "+err.message);}
+    finally{if(btn)btn.disabled=false;}
+  }
+  async function processPriceTask(taskId,params){
+    const response=await fetch("/api/predict-price",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(params),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Price prediction failed");
+    const result=data.result||{};
+    const price=Number(result.estimatedPrice||0);
+    if(price>0){const el=document.getElementById("askingPrice");if(el){el.value=Math.round(price);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}}
+    await putState("lastPricePrediction",{taskId,params,result,completedAt:Date.now()});
+    await removeOutbox(taskId).catch(()=>{});
+    const state=document.getElementById("pricePredictState");if(state)state.textContent=price>0?"✓ Price synced: ₹"+Math.round(price):"✓ Prediction synced";
+    toast(price>0?"✓ Gemini price estimate: ₹"+Math.round(price):"✓ Price prediction complete");
+    return result;
   }
   function requestsScreen(){
     cleanDemoRequests(); normalizePricing();
