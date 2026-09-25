@@ -338,16 +338,22 @@ document.addEventListener("DOMContentLoaded", () => {
     try{await ensureSession();}catch{return;}
     const items=await getOutbox().catch(()=>[]);
     if(!items.length)return;
+    for(const item of items.filter(x=>x.type==="image_analysis"||x.type==="price_prediction")){
+      try{if(item.type==="image_analysis")await processImageTask(item.id);else await processPriceTask(item.id,item.data?.params||{});}
+      catch(err){console.warn("Pending AI task:",item.id,err);}
+    }
+    const remaining=await getOutbox().catch(()=>[]);
+    const apiItems=remaining.filter(x=>x.type!=="image_analysis"&&x.type!=="price_prediction");
+    if(!apiItems.length){updateNetworkStatus();return;}
     try{
-      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:items}),credentials:"same-origin"});
+      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:apiItems}),credentials:"same-origin"});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)return;
-      for(const item of items){
-        if((data.results||[]).some(x=>x.id===item.id)) await removeOutbox(item.id).catch(()=>{});
-      }
+      for(const item of apiItems)if((data.results||[]).some(x=>x.id===item.id))await removeOutbox(item.id).catch(()=>{});
       updateNetworkStatus();
     }catch{}
   }
+
   function updateNetworkStatus(){
     const el=document.getElementById("netStatus");
     if(!el)return;
@@ -356,6 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
     el.title=navigator.onLine?"Connected — pending changes will sync.":"Offline — changes are saved on this device.";
   }
   window.addEventListener("online",()=>{updateNetworkStatus();syncPending();});
+  setInterval(()=>{if(navigator.onLine)syncPending();},15000);
   window.addEventListener("offline",updateNetworkStatus);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   function toast(text){ const d=document.createElement("div"); d.className="toast"; d.textContent=text; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
