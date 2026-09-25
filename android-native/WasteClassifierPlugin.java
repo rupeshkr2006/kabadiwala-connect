@@ -120,7 +120,10 @@ public class WasteClassifierPlugin extends Plugin {
 
                 JSObject result = new JSObject();
                 result.put("category", "e-waste");
-                result.put("itemType", best < LABELS.length ? LABELS[best] : "Unknown");
+                String detectedLabel = best < LABELS.length ? LABELS[best] : "Unknown";
+                result.put("itemType", detectedLabel);
+                result.put("label", detectedLabel);
+                result.put("predictedLabel", detectedLabel);
                 result.put("labelIndex", best);
                 result.put("confidence", clamp(scores[best], 0f, 1f));
                 result.put("notes", "Offline on-device MobileNetV2 classification. No network request was used.");
