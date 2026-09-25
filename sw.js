@@ -1,4 +1,4 @@
-const CACHE_NAME = "kabadiwala-connect-v11-admin-entry";
+const CACHE_NAME = "kabadiwala-connect-v12-offline-ai";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -7,10 +7,9 @@ const APP_SHELL = [
   "/favicon.svg",
   "/offline-db.mjs",
   "/manifest.webmanifest", "/admin.html",
-  "/models/labels.json",
-  "/models/ewaste_mobilenetv2_fp16.tflite",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js",
-  "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js"
+  "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.9/dist/tf-tflite.min.js",
+  "/offline-ai.mjs"
 ];
 const CACHE_ORIGINS = new Set([self.location.origin,"https://cdn.jsdelivr.net"]);
 
