@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let requests = JSON.parse(localStorage.requests || "[]");
   let profile = JSON.parse(localStorage.kcProfile || "null");
   let recognition = null;
+  let voiceRecorder = null;
+  let voiceChunks = [];
   let maps = {};
   let marketLatest = [];
   let marketTrends = [];
@@ -495,18 +497,49 @@ document.addEventListener("DOMContentLoaded", () => {
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
   function applyAiResult(result){
-    const payload=(result&&typeof result==="object"&&(result.value||result.data||result.result))||result||{};
-    const setValue=(id,value)=>{const el=document.getElementById(id);if(el&&value!==undefined&&value!==null&&String(value).trim()!==""){el.value=String(value);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}};
-    const category=String(payload.category||payload.material||payload.materialCategory||"").trim();
-    const item=String(payload.itemType||payload.label||payload.predictedLabel||payload.className||payload.prediction||"").trim();
+    let payload=result;
+    if(typeof payload==="string"){
+      try{payload=JSON.parse(payload);}catch{payload={};}
+    }
+    payload=(payload&&typeof payload==="object"&&(payload.value||payload.data||payload.result))||payload||{};
+    if(typeof payload==="string"){try{payload=JSON.parse(payload);}catch{payload={};}}
+    const setValue=(id,value)=>{
+      const el=document.getElementById(id);
+      if(!el||value===undefined||value===null)return false;
+      const text=String(value).trim();
+      if(!text)return false;
+      el.value=text;
+      el.dispatchEvent(new Event("input",{bubbles:true}));
+      el.dispatchEvent(new Event("change",{bubbles:true}));
+      return true;
+    };
+    const rawCategory=String(payload.category||payload.material||payload.materialCategory||payload.scrapCategory||payload.type||"").trim();
+    const rawItem=String(payload.itemType||payload.item||payload.label||payload.predictedLabel||payload.className||payload.prediction||payload.materialName||"").trim();
+    const categoryMap=[
+      ["plastic",/plastic|polyethylene|pet|polypropylene/i],["paper",/paper|newspaper|magazine/i],
+      ["cardboard",/cardboard|carton|corrugated/i],["metal",/^metal$|mixed metal|scrap metal/i],
+      ["iron",/iron|steel/i],["copper",/copper|wire|cable/i],["aluminium",/alumin/i],
+      ["e-waste",/e-?waste|electronic|electronics|pcb|circuit|computer|phone|laptop|battery/i]
+    ];
+    const mapped=categoryMap.find(([,re])=>re.test(rawCategory)||re.test(rawItem));
+    const category=mapped?mapped[0]:rawCategory;
     if(category)setValue("cat",category);
-    if(item)setValue("itemType",item);
-    if(payload.weight!==undefined)setValue("weight",payload.weight);
-    if(payload.askingPrice!==undefined)setValue("askingPrice",payload.askingPrice);
-    else if(payload.expectedPrice!==undefined)setValue("askingPrice",payload.expectedPrice);
-    else if(payload.price!==undefined)setValue("askingPrice",payload.price);
-    if(payload.condition){const el=document.getElementById("cond"),x=String(payload.condition).toLowerCase();if(el){el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;el.dispatchEvent(new Event("change",{bubbles:true}));}}
-    if(payload.notes)setValue("notes",payload.notes);
+    if(rawItem)setValue("itemType",rawItem);
+    const weight=payload.weightKg??payload.weight_kg??payload.weight;
+    if(weight!==undefined&&weight!==null)setValue("weight",String(weight).match(/kg/i)?String(weight):String(weight)+" kg");
+    const price=payload.askingPrice??payload.expectedPrice??payload.price;
+    if(price!==undefined&&price!==null&&Number(price)>0)setValue("askingPrice",Math.round(Number(price)));
+    if(payload.condition){
+      const x=String(payload.condition).toLowerCase(),el=document.getElementById("cond");
+      if(el){
+        el.selectedIndex=/damaged|broken|poor|bad/.test(x)?2:/used|old|fair/.test(x)?1:0;
+        el.dispatchEvent(new Event("change",{bubbles:true}));
+      }
+    }
+    const notes=payload.notes??payload.description??payload.observation;
+    if(notes)setValue("notes",notes);
+    document.getElementById("cat")?.dispatchEvent(new Event("input",{bubbles:true}));
+    document.getElementById("weight")?.dispatchEvent(new Event("input",{bubbles:true}));
     return {category:document.getElementById("cat")?.value||"",itemType:document.getElementById("itemType")?.value||"",confidence:Number(payload.confidence)};
   }
   async function analyzeScrapPhoto(file){
@@ -740,17 +773,84 @@ function listScreen(){
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
+  async function startRecordedVoice(){
+    const state=document.getElementById("listenState"),mic=document.getElementById("mic");
+    if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){
+      if(state)state.textContent="Voice input is not supported by this browser.";
+      return toast("Voice input is not supported here. Use Chrome/Android or type the details.");
+    }
+    if(voiceRecorder&&voiceRecorder.state==="recording"){voiceRecorder.stop();return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      voiceChunks=[];
+      const mime=["audio/webm;codecs=opus","audio/webm","audio/mp4"].find(x=>MediaRecorder.isTypeSupported?.(x))||"";
+      voiceRecorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+      const started=Date.now();
+      if(state)state.textContent="Listening… speak your scrap details";
+      if(mic)mic.classList.add("recording");
+      voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceChunks.push(e.data);};
+      voiceRecorder.onstop=async()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        if(mic)mic.classList.remove("recording");
+        if(state)state.textContent="Processing voice…";
+        const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||mime||"audio/webm"});
+        voiceRecorder=null;
+        if(blob.size<1000){if(state)state.textContent="No voice was captured.";return toast("No voice was captured. Tap the mic and speak clearly.");}
+        try{
+          const dataUrl=await readDataUrl(blob);
+          const response=await fetch("/api/transcribe-voice",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({audio:dataUrl,mimeType:blob.type})});
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data.error||data.detail||"Voice transcription failed.");
+          const spoken=String(data.text||"").trim();
+          if(!spoken)throw new Error("No speech was detected.");
+          parseVoice(spoken);
+          if(state)state.textContent="✓ Voice captured";
+          toast("✓ Voice details added to the form");
+        }catch(err){
+          console.error(err);
+          if(state)state.textContent=err.message||"Voice input failed.";
+          toast(err.message||"Voice input failed. Please try again.");
+        }
+      };
+      voiceRecorder.start();
+      setTimeout(()=>{if(voiceRecorder&&voiceRecorder.state==="recording"&&Date.now()-started>=1000)voiceRecorder.stop();},8000);
+    }catch(err){
+      console.error(err);
+      if(mic)mic.classList.remove("recording");
+      if(state)state.textContent="Microphone permission is required.";
+      toast("Allow microphone permission and try again.");
+    }
+  }
   function startVoice(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR)return toast(tr("voiceUnsupported"));
+    if(!SR)return startRecordedVoice();
     if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
-    recognition=new SR();recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
-    const state=document.getElementById("listenState"), mic=document.getElementById("mic");
+    recognition=new SR();
+    recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";
+    recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
+    const state=document.getElementById("listenState"),mic=document.getElementById("mic");
+    let completed=false;
     recognition.onstart=()=>{if(state)state.textContent=tr("listening");if(mic)mic.classList.add("recording");};
-    recognition.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";parseVoice(text.trim());};
-    recognition.onerror=()=>{if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
-    recognition.onend=()=>{if(state)state.textContent="";if(mic)mic.classList.remove("recording");recognition=null;};
-    try{recognition.start();}catch(e){toast(tr("voiceError"));recognition=null;}
+    recognition.onresult=e=>{
+      let text="";
+      for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";
+      text=text.trim();
+      if(text){completed=true;parseVoice(text);}
+    };
+    recognition.onerror=e=>{
+      console.warn("Speech recognition error",e?.error);
+      if(mic)mic.classList.remove("recording");
+      try{recognition.stop();}catch{}
+      recognition=null;
+      if(!completed && ["not-allowed","service-not-allowed","network","audio-capture","no-speech"].includes(e?.error))startRecordedVoice();
+      else if(!completed){if(state)state.textContent="Voice input failed.";toast("Voice input failed. Tap the mic and try again.");}
+    };
+    recognition.onend=()=>{
+      if(state&&!completed)state.textContent="";
+      if(mic)mic.classList.remove("recording");
+      recognition=null;
+    };
+    try{recognition.start();}catch(e){recognition=null;startRecordedVoice();}
   }
   function parseVoice(text){
     const raw=normalizeDigits(text), low=raw.toLowerCase();
