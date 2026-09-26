@@ -86,7 +86,7 @@ export default async function handler(req,res){
       if(phone===String(process.env.ADMIN_PHONE||"9990000000").replace(/\D/g,""))return res.status(403).json({error:"The admin account cannot be changed."});
       const exists=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&select=phone,role");
       if(!exists?.[0]||!["collector","recycler"].includes(String(exists[0].role)))return res.status(404).json({error:"Collector or recycler account not found."});
-      const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({active,verification_status:active?(String(exists[0].role)==="recycler"?"pending":null):"deleted",verification_badge:active?false:false})});
+      const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({active,verification_status:active?(String(exists[0].role)==="recycler"?"pending":"pending"):"suspended",verification_badge:false,verified_at:null,verified_by:null})});
       return res.status(200).json({ok:true,phone,active,user:rows?.[0]||null});
     }
     if(req.method==="POST"&&action==="delete-user"){
@@ -96,8 +96,8 @@ export default async function handler(req,res){
       const exists=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&select=phone,role,active");
       if(!exists?.[0])return res.status(404).json({error:"User account not found."});
       if(!["collector","recycler"].includes(String(exists[0].role)))return res.status(403).json({error:"Only collector or recycler accounts can be deleted."});
-      const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({active:false,verification_status:"deleted",verification_badge:false,verified_at:null,verified_by:null,verification_note:"Deleted by admin "+session.phone})});
-      return res.status(200).json({ok:true,phone,recycler:rows?.[0]||null});
+      const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({active:false,verification_status:"suspended",verification_badge:false,verified_at:null,verified_by:null,verification_note:"Account deleted by admin "+session.phone})});
+      return res.status(200).json({ok:true,phone,deleted:true,user:rows?.[0]||null});
     }
     if(req.method==="POST"&&action==="verify-recycler"){
       const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,""),decision=String(p.decision||"").toLowerCase();
