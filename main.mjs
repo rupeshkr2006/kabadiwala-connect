@@ -1052,11 +1052,11 @@ function listScreen(){
   }
   function render(){
     if(!user?.verified){return auth();}
-    if(!role)return roleScreen();
     const h=location.hash.replace("#","")||"dashboard";
     if(h==="login")return phoneScreen();
     if(h==="otp")return otpScreen();
     if(h==="role")return roleScreen();
+    if(!role)return roleScreen();
     if(h==="setup")return setupScreen();
     if(h==="list")return listScreen();
     if(h==="requests")return requestsScreen();
