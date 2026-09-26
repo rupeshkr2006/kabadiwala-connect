@@ -84,3 +84,6 @@
 .admin-doc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid #d9e5df;border-radius:10px;background:#f8fbf9}
 .admin-doc-row>b,.admin-doc-row strong{font-weight:700}
 .verify-doc-missing{font-size:.85rem;color:#9b3d35;font-weight:600}
+
+.form-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media(max-width:520px){.form-actions{grid-template-columns:1fr}}
