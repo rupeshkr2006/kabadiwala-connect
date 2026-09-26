@@ -409,23 +409,42 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("otpForm").onsubmit=async e=>{
       e.preventDefault();
       if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));
-      const requestedRole=accounts[accountId]?.role||"collector";
+      const localRole=accounts[accountId]?.role||"";
       try{
-        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:requestedRole})});
+        const body={phone:accountId,otp:"123456"};
+        if(localRole)body.role=localRole;
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)});
         const data=await sr.json().catch(()=>({}));
         if(!sr.ok)return toast(data.error||tr("otpError"));
-        role=data.role||requestedRole;
+        role=data.role||"";
+        user={...(user||{}),verified:true,phone:accountId};
+        profile=accounts[accountId]?.profile||profile||{};
+        pos=accounts[accountId]?.pos||pos||null;
+        sessionReady=true;
+        save();
+        if(role==="admin"){location.hash="admin";render();return;}
+        // New accounts have no persisted role yet. Only these users see the
+        // collector/recycler choice; existing accounts go straight to their
+        // stored role dashboard.
+        go(data.newAccount||!role?"role":"dashboard");
+        return;
       }catch(err){return toast("Could not start session. Please try again.");}
-      user={...(user||{}),verified:true,phone:accountId};profile=accounts[accountId]?.profile||profile||{};pos=accounts[accountId]?.pos||pos||null;sessionReady=true;
-      save();
-      if(role==="admin"){location.hash="admin";render();return;}
-      go(role?"dashboard":"role");
     };
   }
 
   function roleScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div><button class="secondary full" id="adminEntry" style="margin-top:14px">🛡 Admin panel</button><p id="adminEntryMsg" class="muted" style="margin-top:8px"></p></div></main>';
-    A.querySelectorAll("[data-role]").forEach(b=>b.onclick=async()=>{role=b.dataset.role;save();try{if(user?.verified)await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role})});}catch{}go("setup");});
+    A.querySelectorAll("[data-role]").forEach(b=>b.onclick=async()=>{
+      const selected=b.dataset.role;
+      try{
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:selected})});
+        const data=await sr.json().catch(()=>({}));
+        if(!sr.ok)throw new Error(data.error||tr("roleError"));
+        role=data.role||selected;
+        save();
+        go("setup");
+      }catch(err){toast(err.message||tr("roleError"));}
+    });
     document.getElementById("adminEntry").onclick=async()=>{const msg=document.getElementById("adminEntryMsg");msg.textContent="Checking admin access…";try{const r=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:"admin"})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"This account is not configured as admin.");role="admin";save();go("admin");}catch(e){msg.textContent=e.message||"Admin access denied.";}}};
   function setupScreen(){
     const isR=role==="recycler";
@@ -445,6 +464,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.getElementById("setupForm").onsubmit=async e=>{
       e.preventDefault();
+      if(isR){
+        const docs=Array.isArray(profile?.documents)?profile.documents:[];
+        const requiredDocs=[
+          ["authorization","E-waste authorization certificate"],
+          ["registration","Business / registration certificate"],
+          ["address_proof","Facility / address proof"]
+        ];
+        const missing=requiredDocs.filter(([type])=>!docs.some(d=>String(d.document_type||"")===type));
+        if(missing.length){
+          return toast("Recycler documents are compulsory. Upload: "+missing.map(x=>x[1]).join(", "));
+        }
+      }
       const next={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};
       if(isR)Object.assign(next,{business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,facilityAddress:document.getElementById("facilityAddress").value,registrationNumber:document.getElementById("registrationNumber").value,gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,materials:document.getElementById("materials").value,pickupAvailable:document.getElementById("pickupAvailable").value!=="no",serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value});
       profile=next;save();
