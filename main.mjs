@@ -397,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function phoneScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">Sign in with your mobile number</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" autofocus required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><button type="button" class="text-btn admin-demo-login" id="adminDemoLogin">🛡 Admin demo login</button><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
-    const continueLogin=()=>{const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));accountId=p;const existing=accounts[p];user={phone:p,verified:false};role=existing?.role||"";profile=existing?.profile||null;pos=null;save();go("otp");};
+    const continueLogin=()=>{const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));accountId=p;user={phone:p,verified:false};role="";const existing=accounts[p];profile=existing?.profile||null;pos=null;sessionReady=false;save();go("otp");};
     document.getElementById("phoneForm").onsubmit=e=>{e.preventDefault();continueLogin();};
     document.getElementById("adminDemoLogin").onclick=()=>{document.getElementById("phone").value="9990000000";continueLogin();};
   }
