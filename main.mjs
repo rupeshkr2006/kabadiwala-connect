@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let sharedPoll = null;
   let sessionReady = false;
   let profileEditSnapshot = null;
+  let adminPoll = null;
   const FALLBACK_MARKET = [
     {material_name:"Batteries",buying_price:105,unit:"kg",market_min:94.5,market_max:115.5,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
     {material_name:"Cables",buying_price:440,unit:"kg",market_min:396,market_max:484,source:"Seeded SIH reference (demo)",observed_at:"2026-09-24"},
@@ -1080,6 +1081,7 @@ function listScreen(){
     dashboard();
   }
   window.addEventListener("hashchange",render);
+  if(!adminPoll)adminPoll=setInterval(()=>{if(role==="admin"&&location.hash==="#admin")adminScreen();},15000);
   cleanDemoRequests();
   if(!location.hash)location.hash=user?.verified?(role==="admin"?"admin":(role?"dashboard":"role")):"login";
   updateNetworkStatus();
