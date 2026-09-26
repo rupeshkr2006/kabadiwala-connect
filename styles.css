@@ -87,3 +87,6 @@
 
 .form-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 @media(max-width:520px){.form-actions{grid-template-columns:1fr}}
+
+.global-back{border:1px solid var(--line)!important;background:#fff!important;color:var(--green)!important;border-radius:9px!important;padding:8px 11px!important;font-weight:600!important}
+.global-back:hover,.global-back:focus-visible{background:var(--green2)!important;outline:none}
