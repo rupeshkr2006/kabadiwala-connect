@@ -37,9 +37,11 @@ export default async function handler(req,res){
   const action=String(req.query?.action||"");
   try{
     if(req.method==="GET"&&action==="overview"){
-      const [collectors,recyclers,lots,offers,transactions,handovers,earnings]=await Promise.all([
+      const [collectors,recyclers,allCollectors,allRecyclers,lots,offers,transactions,handovers,earnings]=await Promise.all([
         rest("/rest/v1/profiles?role=eq.collector&active=eq.true&select=id,phone,name,preferred_language,general_location,active,created_at,updated_at&order=created_at.desc&limit=200").catch(()=>[]),
         rest("/rest/v1/profiles?role=eq.recycler&active=eq.true&select=id,phone,name,business_name,general_location,facility_address,preferred_language,accepted_materials,pickup_radius_km,latitude,longitude,active,registration_number,gst_number,authorization_number,authorization_type,authorization_expiry,contact_email,pickup_available,service_area,offered_rate_notes,recycler_documents,verification_status,verification_badge,verified_at,verified_by,verification_note,created_at,updated_at&order=created_at.desc&limit=200").catch(()=>[]),
+        rest("/rest/v1/profiles?role=eq.collector&select=id,phone,name,preferred_language,general_location,active,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
+        rest("/rest/v1/profiles?role=eq.recycler&select=id,phone,name,business_name,general_location,facility_address,active,verification_status,verification_badge,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
         rest("/rest/v1/platform_lots?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_offers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_transactions?select=*&order=created_at.desc&limit=300").catch(()=>[]),
@@ -51,7 +53,7 @@ export default async function handler(req,res){
       const verified=(recyclers||[]).filter(x=>String(x.verification_status)==="verified").length;
       return res.status(200).json({
         summary:{collectors:(collectors||[]).length,recyclers:(recyclers||[]).length,pending_recycler_verification:pending,verified_recyclers:verified,lots:(lots||[]).length,offers:(offers||[]).length,transactions:(transactions||[]).length,handovers:(handovers||[]).length,earnings:(earnings||[]).length},
-        collectors:collectors||[],recyclers:recyclers||[],lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:market||[],
+        collectors:collectors||[],recyclers:recyclers||[],all_collectors:allCollectors||[],all_recyclers:allRecyclers||[],lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:market||[],
         generated_at:new Date().toISOString()
       });
     }
@@ -77,6 +79,15 @@ export default async function handler(req,res){
       const now=new Date().toISOString();
       const rows=await rest("/rest/v1/prices",{method:"POST",headers:{"Prefer":"return=representation"},body:JSON.stringify({material_id:materialId,material_name:materialName,sub_category:subCategory,city,state,buying_price:buying,selling_price:selling,unit,market_min:min,market_max:max,source,price_type:"admin",valid_from:now,observed_at:now})});
       return res.status(200).json({ok:true,item:rows?.[0]||null});
+    }
+    if(req.method==="POST"&&action==="set-user-active"){
+      const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,""),active=p.active===true;
+      if(!/^\d{10}$/.test(phone))return res.status(400).json({error:"Valid user phone is required."});
+      if(phone===String(process.env.ADMIN_PHONE||"9990000000").replace(/\D/g,""))return res.status(403).json({error:"The admin account cannot be changed."});
+      const exists=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&select=phone,role");
+      if(!exists?.[0]||!["collector","recycler"].includes(String(exists[0].role)))return res.status(404).json({error:"Collector or recycler account not found."});
+      const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify({active,verification_status:active?(String(exists[0].role)==="recycler"?"pending":null):"deleted",verification_badge:active?false:false})});
+      return res.status(200).json({ok:true,phone,active,user:rows?.[0]||null});
     }
     if(req.method==="POST"&&action==="delete-user"){
       const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,"");
