@@ -66,7 +66,18 @@ export default async function handler(req,res){
         const check=await fetch(url+"/rest/v1/profiles?phone=eq."+encodeURIComponent(clean)+"&select=id,role&limit=1",{headers});
         const rows=check.ok?await check.json().catch(()=>[]):[];
         if(rows?.[0]){
-          if(rows[0].role&&["collector","recycler","admin"].includes(rows[0].role))sessionRole=rows[0].role;
+          // A partially-created/pending profile is completed by the user's
+          // explicit first-time role choice. A real existing role is retained.
+          if(rows[0].role&&["collector","recycler","admin"].includes(rows[0].role)){
+            sessionRole=rows[0].role;
+          }else{
+            const patched=await fetch(url+"/rest/v1/profiles?id=eq."+encodeURIComponent(rows[0].id),{method:"PATCH",headers,body:JSON.stringify({phone:clean,role:requestedRole,active:true,profile_source:"app"})});
+            if(!patched.ok){
+              const detail=await patched.text().catch(()=> "");
+              return res.status(502).json({error:"Could not complete account setup.",detail});
+            }
+            sessionRole=requestedRole;
+          }
         }else{
           const created=await fetch(url+"/rest/v1/profiles",{method:"POST",headers,body:JSON.stringify({phone:clean,role:requestedRole,name:"New User",active:true,profile_source:"app"})});
           if(!created.ok){
