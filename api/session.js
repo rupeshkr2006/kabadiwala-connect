@@ -27,10 +27,12 @@ async function registeredRole(phone){
   const key=secret();
   if(!url||!key)return null;
   try{
-    const r=await fetch(url+"/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&active=eq.true&select=role&limit=1",{headers:{apikey:key,Authorization:"Bearer "+key}});
+    const r=await fetch(url+"/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&select=role,active&order=created_at.desc&limit=1",{headers:{apikey:key,Authorization:"Bearer "+key}});
     if(!r.ok)return null;
     const rows=await r.json().catch(()=>[]);
-    const role=rows?.[0]?.role;
+    const row=rows?.[0];
+    if(row?.active===false)return null;
+    const role=row?.role;
     return ["collector","recycler","admin"].includes(role)?role:null;
   }catch{return null;}
 }
