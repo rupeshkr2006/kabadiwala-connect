@@ -82,8 +82,14 @@ export default async function handler(req,res){
       const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,""),decision=String(p.decision||"").toLowerCase();
       if(!/^\d{10}$/.test(phone))return res.status(400).json({error:"Valid recycler phone is required."});
       if(!["verify","reject","suspend"].includes(decision))return res.status(400).json({error:"Invalid verification decision."});
-      const exists=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&role=eq.recycler&select=phone");
+      const exists=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&role=eq.recycler&select=phone,recycler_documents");
       if(!exists?.[0])return res.status(404).json({error:"Recycler account not found."});
+      if(decision==="verify"){
+        const docs=Array.isArray(exists[0].recycler_documents)?exists[0].recycler_documents:[];
+        const required=["authorization","registration","address_proof"];
+        const missing=required.filter(type=>!docs.some(d=>String(d?.document_type||"")===type));
+        if(missing.length)return res.status(400).json({error:"Cannot verify recycler until all compulsory documents are submitted.",missing_documents:missing});
+      }
       const status=decision==="verify"?"verified":decision==="reject"?"rejected":"suspended";
       const patch={verification_status:status,verification_badge:status==="verified",verified_at:status==="verified"?new Date().toISOString():null,verified_by:session.phone,verification_note:String(p.note||"").slice(0,500)||null,active:status!=="suspended"};
       const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(patch)});
