@@ -409,10 +409,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("otpForm").onsubmit=async e=>{
       e.preventDefault();
       if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));
-      const localRole=accounts[accountId]?.role||"";
       try{
+        // Always let the server determine whether this is an existing account.
+        // A cached local role must never skip the new-account role selection.
         const body={phone:accountId,otp:"123456"};
-        if(localRole)body.role=localRole;
         const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)});
         const data=await sr.json().catch(()=>({}));
         if(!sr.ok)return toast(data.error||tr("otpError"));
