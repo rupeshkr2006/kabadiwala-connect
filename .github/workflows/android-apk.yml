@@ -2,7 +2,7 @@ name: Build Kabadiwala Connect Android APK
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "native-apk-final"]
   workflow_dispatch:
 
 jobs:
@@ -21,13 +21,19 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Setup Node
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install Capacitor
+      - name: Install JavaScript dependencies
         run: npm install
+
+      - name: Prepare bundled web app
+        run: |
+          rm -rf www
+          mkdir -p www
+          cp -R public/. www/
 
       - name: Add Android platform
         run: npx cap add android
@@ -42,7 +48,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Kabadiwala-Connect-debug-apk
+          name: Kabadiwala-Connect-final-offline-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

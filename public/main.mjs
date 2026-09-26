@@ -1,4 +1,4 @@
-import { putState, getState, enqueue, getOutbox, removeOutbox } from "./offline-db.mjs";
+import { putState, getState, enqueue, getOutbox, removeOutbox, putMedia, getMedia, removeMedia } from "./offline-db.mjs";
 
 document.addEventListener("DOMContentLoaded", () => {
   const A = document.getElementById("app");
@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let requests = JSON.parse(localStorage.requests || "[]");
   let profile = JSON.parse(localStorage.kcProfile || "null");
   let recognition = null;
+  let voiceRecorder = null;
+  let voiceChunks = [];
   let maps = {};
   let marketLatest = [];
   let marketTrends = [];
@@ -55,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"Indicative market rate", minimumPrice:"Minimum expected price", estimated:"Estimated value", itemType:"Item / type", askingPrice:"Your asking price", expectedPrice:"Expected price", currentOffer:"Current offer",
       counter:"Counter", acceptPrice:"Accept price", agreed:"Agreed", collectorOffer:"Collector offer", recyclerOffer:"Recycler offer",
       counterHint:"Enter a new price", priceNote:"Indicative only — final price is negotiated.", priceRequired:"Enter a valid price.",
-      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the details below.", uploadPhoto:"Upload scrap photo", uploadHint:"Click to choose a photo or take one with your camera.", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
+      priceHistory:"Bargain history", waiting:"Waiting for the other side", bargain:"Bargain", photoAI:"AI scrap recognition", photoHint:"Upload a clear photo and AI will fill the matching fields below.", uploadPhoto:"Upload scrap photo", uploadHint:"Choose a photo from your gallery or take a new photo.", takePhoto:"Take Photo", galleryPhoto:"Choose from Gallery", aiFieldsFilled:"AI fields filled", aiNoFields:"AI result did not contain a classified item", changePhoto:"Change photo", analyzePhoto:"Analyze photo", analyzingPhoto:"Analyzing photo…", photoReady:"Photo analyzed", photoError:"Could not analyze this photo.", photoDisclaimer:"AI result is an estimate. Check the material before submitting."
 
     },
     hi: {
@@ -80,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अनुमानित बाजार दर", minimumPrice:"न्यूनतम अनुमानित कीमत", estimated:"अनुमानित मूल्य", itemType:"वस्तु / प्रकार", askingPrice:"आपकी कीमत", expectedPrice:"आपकी अपेक्षित कीमत", currentOffer:"वर्तमान ऑफर",
       counter:"नई कीमत", acceptPrice:"कीमत स्वीकार करें", agreed:"तय कीमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रीसायकलर ऑफर",
       counterHint:"नई कीमत डालें", priceNote:"यह केवल अनुमान है — अंतिम कीमत बातचीत से तय होगी।", priceRequired:"सही कीमत डालें।",
-      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे की जानकारी भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"फोटो चुनने या कैमरा इस्तेमाल करने के लिए दबाएं।", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें."
+      priceHistory:"बातचीत का इतिहास", waiting:"दूसरी तरफ के जवाब का इंतजार", bargain:"मोलभाव", photoAI:"AI स्क्रैप पहचान", photoHint:"साफ फोटो अपलोड करें और AI नीचे के संबंधित बॉक्स भर देगा।", uploadPhoto:"स्क्रैप फोटो अपलोड करें", uploadHint:"गैलरी से फोटो चुनें या नई फोटो लें।", takePhoto:"फोटो लें", galleryPhoto:"गैलरी से चुनें", aiFieldsFilled:"AI ने बॉक्स भर दिए", changePhoto:"फोटो बदलें", analyzePhoto:"फोटो जांचें", analyzingPhoto:"फोटो जांच रहा है…", photoReady:"फोटो जांची गई", photoError:"फोटो जांच नहीं हो सकी।", photoDisclaimer:"AI परिणाम अनुमान है। सबमिट करने से पहले सामग्री जांचें."
 
     },
     mr: {
@@ -105,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
       marketRate:"अंदाजे बाजार दर", minimumPrice:"किमान अंदाजे किंमत", estimated:"अंदाजे किंमत", itemType:"वस्तू / प्रकार", askingPrice:"तुमची किंमत", expectedPrice:"तुमची अपेक्षित किंमत", currentOffer:"सध्याची ऑफर",
       counter:"नवी किंमत", acceptPrice:"किंमत स्वीकारा", agreed:"ठरलेली किंमत", collectorOffer:"कलेक्टर ऑफर", recyclerOffer:"रिसायकलर ऑफर",
       counterHint:"नवी किंमत टाका", priceNote:"ही फक्त अंदाजे किंमत आहे — अंतिम किंमत चर्चेने ठरेल.", priceRequired:"योग्य किंमत टाका.",
-      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील माहिती भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"फोटो निवडण्यासाठी किंवा कॅमेरा वापरण्यासाठी दाबा.", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा."
+      priceHistory:"बोलणीचा इतिहास", waiting:"दुसऱ्या बाजूच्या उत्तराची वाट पाहत आहे", bargain:"भाव करा", photoAI:"AI भंगार ओळख", photoHint:"स्वच्छ फोटो अपलोड करा आणि AI खालील संबंधित बॉक्स भरेल.", uploadPhoto:"भंगाराचा फोटो अपलोड करा", uploadHint:"गॅलरीतून फोटो निवडा किंवा नवीन फोटो घ्या.", takePhoto:"फोटो घ्या", galleryPhoto:"गॅलरीतून निवडा", aiFieldsFilled:"AI ने बॉक्स भरले", changePhoto:"फोटो बदला", analyzePhoto:"फोटो तपासा", analyzingPhoto:"फोटो तपासत आहे…", photoReady:"फोटो तपासला", photoError:"फोटो तपासता आला नाही.", photoDisclaimer:"AI निकाल अंदाज आहे. सबमिट करण्यापूर्वी सामग्री तपासा."
 
     }
   };
@@ -259,6 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
     return data;
   }
+
   async function apiGet(action){
     await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{credentials:"same-origin",cache:"no-store"});
@@ -337,16 +340,22 @@ document.addEventListener("DOMContentLoaded", () => {
     try{await ensureSession();}catch{return;}
     const items=await getOutbox().catch(()=>[]);
     if(!items.length)return;
+    for(const item of items.filter(x=>x.type==="image_analysis"||x.type==="price_prediction")){
+      try{if(item.type==="image_analysis")await processImageTask(item.id);else await processPriceTask(item.id,item.data?.params||{});}
+      catch(err){console.warn("Pending AI task:",item.id,err);}
+    }
+    const remaining=await getOutbox().catch(()=>[]);
+    const apiItems=remaining.filter(x=>x.type!=="image_analysis"&&x.type!=="price_prediction");
+    if(!apiItems.length){updateNetworkStatus();return;}
     try{
-      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:items})});
-      if(!response.ok)return;
+      const response=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({operations:apiItems}),credentials:"same-origin"});
       const data=await response.json().catch(()=>({}));
-      for(const item of items){
-        if((data.results||[]).some(x=>x.id===item.id)) await removeOutbox(item.id).catch(()=>{});
-      }
+      if(!response.ok)return;
+      for(const item of apiItems)if((data.results||[]).some(x=>x.id===item.id))await removeOutbox(item.id).catch(()=>{});
       updateNetworkStatus();
     }catch{}
   }
+
   function updateNetworkStatus(){
     const el=document.getElementById("netStatus");
     if(!el)return;
@@ -355,6 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
     el.title=navigator.onLine?"Connected — pending changes will sync.":"Offline — changes are saved on this device.";
   }
   window.addEventListener("online",()=>{updateNetworkStatus();syncPending();});
+  setInterval(()=>{if(navigator.onLine)syncPending();},15000);
   window.addEventListener("offline",updateNetworkStatus);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   function toast(text){ const d=document.createElement("div"); d.className="toast"; d.textContent=text; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
@@ -387,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function phoneScreen(){
     A.innerHTML='<main class="auth"><div class="auth-card"><div class="logo-ring">↻</div><p class="eyebrow">KABADIWALA CONNECT</p><h1>'+tr("tagline")+'</h1><p class="lead">Sign in with your mobile number</p><form id="phoneForm"><label>'+tr("phone")+'<div class="phone-input"><span>+91</span><input id="phone" inputmode="numeric" maxlength="10" placeholder="9876543210" autocomplete="tel" autofocus required></div></label><button class="primary full">'+tr("continue")+' <span>→</span></button></form><button type="button" class="text-btn admin-demo-login" id="adminDemoLogin">🛡 Admin demo login</button><p class="demo-note">'+tr("demoOtp")+'</p></div></main>';
-    const continueLogin=()=>{const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));accountId=p;const existing=accounts[p];user={phone:p,verified:false};role=existing?.role||"";profile=existing?.profile||null;pos=null;save();go("otp");};
+    const continueLogin=()=>{const p=document.getElementById("phone").value.replace(/\D/g,"");if(p.length!==10)return toast(tr("phoneError"));accountId=p;user={phone:p,verified:false};role="";const existing=accounts[p];profile=existing?.profile||null;pos=null;sessionReady=false;save();go("otp");};
     document.getElementById("phoneForm").onsubmit=e=>{e.preventDefault();continueLogin();};
     document.getElementById("adminDemoLogin").onclick=()=>{document.getElementById("phone").value="9990000000";continueLogin();};
   }
@@ -399,24 +409,43 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("otpForm").onsubmit=async e=>{
       e.preventDefault();
       if(document.getElementById("otp").value!=="123456")return toast(tr("otpError"));
-      const requestedRole=accounts[accountId]?.role||"collector";
       try{
-        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:requestedRole})});
+        // Always let the server determine whether this is an existing account.
+        // A cached local role must never skip the new-account role selection.
+        const body={phone:accountId,otp:"123456"};
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)});
         const data=await sr.json().catch(()=>({}));
         if(!sr.ok)return toast(data.error||tr("otpError"));
-        role=data.role||requestedRole;
+        role=data.role||"";
+        user={...(user||{}),verified:true,phone:accountId};
+        profile=accounts[accountId]?.profile||profile||{};
+        pos=accounts[accountId]?.pos||pos||null;
+        sessionReady=true;
+        save();
+        if(role==="admin"){location.hash="admin";render();return;}
+        // New accounts have no persisted role yet. Only these users see the
+        // collector/recycler choice; existing accounts go straight to their
+        // stored role dashboard.
+        go(data.newAccount||!role?"role":"dashboard");
+        return;
       }catch(err){return toast("Could not start session. Please try again.");}
-      user={...(user||{}),verified:true,phone:accountId};profile=accounts[accountId]?.profile||profile||{};pos=accounts[accountId]?.pos||pos||null;sessionReady=true;
-      save();
-      if(role==="admin"){location.hash="admin";render();return;}
-      go(role?"dashboard":"role");
     };
   }
 
   function roleScreen(){
-    A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div></div></main>';
-    A.querySelectorAll("[data-role]").forEach(b=>b.onclick=async()=>{role=b.dataset.role;save();try{if(user?.verified)await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role})});}catch{}go("setup");});
-  }
+    A.innerHTML='<main class="auth"><div class="auth-card role-card"><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div><button class="secondary full" id="adminEntry" style="margin-top:14px">🛡 Admin panel</button><p id="adminEntryMsg" class="muted" style="margin-top:8px"></p></div></main>';
+    A.querySelectorAll("[data-role]").forEach(b=>b.onclick=async()=>{
+      const selected=b.dataset.role;
+      try{
+        const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:selected})});
+        const data=await sr.json().catch(()=>({}));
+        if(!sr.ok)throw new Error(data.error||tr("roleError"));
+        role=data.role||selected;
+        save();
+        go("setup");
+      }catch(err){toast(err.message||tr("roleError"));}
+    });
+    document.getElementById("adminEntry").onclick=async()=>{const msg=document.getElementById("adminEntryMsg");msg.textContent="Checking admin access…";try{const r=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:"admin"})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"This account is not configured as admin.");role="admin";save();go("admin");}catch(e){msg.textContent=e.message||"Admin access denied.";}}};
   function setupScreen(){
     const isR=role==="recycler";
     if(role==="admin"){go("admin");return;}
@@ -435,6 +464,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.getElementById("setupForm").onsubmit=async e=>{
       e.preventDefault();
+      if(isR){
+        const docs=Array.isArray(profile?.documents)?profile.documents:[];
+        const requiredDocs=[
+          ["authorization","E-waste authorization certificate"],
+          ["registration","Business / registration certificate"],
+          ["address_proof","Facility / address proof"]
+        ];
+        const missing=requiredDocs.filter(([type])=>!docs.some(d=>String(d.document_type||"")===type));
+        if(missing.length){
+          return toast("Recycler documents are compulsory. Upload: "+missing.map(x=>x[1]).join(", "));
+        }
+      }
       const next={...(profile||{}),name:document.getElementById("name").value,area:document.getElementById("area").value,radius:document.getElementById("radius").value};
       if(isR)Object.assign(next,{business:document.getElementById("business").value,contactEmail:document.getElementById("contactEmail").value,facilityAddress:document.getElementById("facilityAddress").value,registrationNumber:document.getElementById("registrationNumber").value,gstNumber:document.getElementById("gstNumber").value,authorizationNumber:document.getElementById("authorizationNumber").value,authorizationType:document.getElementById("authorizationType").value,authorizationExpiry:document.getElementById("authorizationExpiry").value,materials:document.getElementById("materials").value,pickupAvailable:document.getElementById("pickupAvailable").value!=="no",serviceArea:document.getElementById("serviceArea").value,offeredRateNotes:document.getElementById("offeredRateNotes").value});
       profile=next;save();
@@ -486,45 +527,144 @@ document.addEventListener("DOMContentLoaded", () => {
   function requestCard(r){
     return '<article class="request-card"><div><span class="status '+String(r.status).toLowerCase()+'">'+esc(r.status)+'</span><h3>'+esc(r.category)+' · '+esc(r.quantity)+'</h3><p>'+esc(r.address||r.collector||"")+'</p><strong class="card-price">'+money(r.agreedPrice||r.currentOffer||r.askingPrice||r.indicativeTotal)+'</strong><small class="card-min">Min. '+money(r.minimumPrice||minimumFor(r.category,r.quantity))+'</small></div><span class="arrow">→</span></article>';
   }
+  function applyAiResult(result){
+    let payload=result;
+    if(typeof payload==="string"){
+      try{payload=JSON.parse(payload);}catch{payload={};}
+    }
+    payload=(payload&&typeof payload==="object"&&(payload.value||payload.data||payload.result))||payload||{};
+    if(typeof payload==="string"){try{payload=JSON.parse(payload);}catch{payload={};}}
+    const setValue=(id,value)=>{
+      const el=document.getElementById(id);
+      if(!el||value===undefined||value===null)return false;
+      const text=String(value).trim();
+      if(!text)return false;
+      el.value=text;
+      el.dispatchEvent(new Event("input",{bubbles:true}));
+      el.dispatchEvent(new Event("change",{bubbles:true}));
+      return true;
+    };
+    const rawCategory=String(payload.category||payload.material||payload.materialCategory||payload.scrapCategory||payload.type||"").trim();
+    const rawItem=String(payload.itemType||payload.item||payload.label||payload.predictedLabel||payload.className||payload.prediction||payload.materialName||"").trim();
+    const categoryMap=[
+      ["plastic",/plastic|polyethylene|pet|polypropylene/i],["paper",/paper|newspaper|magazine/i],
+      ["cardboard",/cardboard|carton|corrugated/i],["metal",/^metal$|mixed metal|scrap metal/i],
+      ["iron",/iron|steel/i],["copper",/copper|wire|cable/i],["aluminium",/alumin/i],
+      ["e-waste",/e-?waste|electronic|electronics|pcb|circuit|computer|phone|laptop|battery/i]
+    ];
+    const mapped=categoryMap.find(([,re])=>re.test(rawCategory)||re.test(rawItem));
+    const category=mapped?mapped[0]:rawCategory;
+    if(category)setValue("cat",category);
+    if(rawItem)setValue("itemType",rawItem);
+    const weight=payload.weightKg??payload.weight_kg??payload.weight;
+    if(weight!==undefined&&weight!==null)setValue("weight",String(weight).match(/kg/i)?String(weight):String(weight)+" kg");
+    const price=payload.askingPrice??payload.expectedPrice??payload.price;
+    if(price!==undefined&&price!==null&&Number(price)>0)setValue("askingPrice",Math.round(Number(price)));
+    if(payload.condition){
+      const x=String(payload.condition).toLowerCase(),el=document.getElementById("cond");
+      if(el){
+        el.selectedIndex=/damaged|broken|poor|bad/.test(x)?2:/used|old|fair/.test(x)?1:0;
+        el.dispatchEvent(new Event("change",{bubbles:true}));
+      }
+    }
+    const notes=payload.notes??payload.description??payload.observation;
+    if(notes)setValue("notes",notes);
+    document.getElementById("cat")?.dispatchEvent(new Event("input",{bubbles:true}));
+    document.getElementById("weight")?.dispatchEvent(new Event("input",{bubbles:true}));
+    return {category:document.getElementById("cat")?.value||"",itemType:document.getElementById("itemType")?.value||"",confidence:Number(payload.confidence)};
+  }
   async function analyzeScrapPhoto(file){
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
-    if(state)state.textContent=tr("analyzingPhoto");
-    if(btn){btn.disabled=true;btn.textContent=tr("analyzingPhoto");}
+    const taskId="image:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    if(state)state.textContent=navigator.onLine?"Analyzing photo…":"Pending local save — will sync when online…";
+    if(btn)btn.disabled=true;
     try{
-      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
-      const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl})});
-      const data=await response.json().catch(()=>({})); if(!response.ok)throw new Error(data.detail?`${data.error||"AI analysis failed"}: ${data.detail}`:(data.error||"AI analysis failed"));
-      const result=data.result||{};
-      if(result.category)document.getElementById("cat").value=result.category;
-      if(result.itemType)document.getElementById("itemType").value=result.itemType;
-      if(result.condition){const x=String(result.condition).toLowerCase(),el=document.getElementById("cond");el.selectedIndex=/damaged|broken/.test(x)?2:/used|old/.test(x)?1:0;}
-      if(result.notes)document.getElementById("notes").value=result.notes;
-      document.getElementById("cat").dispatchEvent(new Event("input"));document.getElementById("weight").dispatchEvent(new Event("input"));
-      if(state)state.textContent=tr("photoReady")+(result.confidence?" · "+Math.round(Number(result.confidence)*100)+"%":"");
-      toast("✓ "+tr("photoReady"));
-    }catch(err){console.error(err);if(state)state.textContent=tr("photoError");toast(tr("photoError"));}
-    finally{if(btn){btn.disabled=false;btn.textContent=tr("analyzePhoto");}}
+      await putMedia(taskId,file,{kind:"image_analysis",mimeType:file.type||"image/jpeg"});
+      await enqueue({id:taskId,type:"image_analysis",data:{taskId}});
+      if(navigator.onLine){
+        await processImageTask(taskId);
+      }else{
+        toast("📷 Pending local save — image queued");
+      }
+    }catch(err){
+      console.error(err); if(state)state.textContent="Could not save photo locally."; toast("Photo queue failed: "+err.message);
+    }finally{if(btn)btn.disabled=false;}
   }
-  function listScreen(){
-    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><label class="photo-drop" id="photoDrop" for="scrapPhoto"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapPhoto" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
+  async function processImageTask(taskId){
+    const media=await getMedia(taskId); if(!media?.blob)throw new Error("Queued image not found");
+    const dataUrl=await readDataUrl(media.blob);
+    const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl}),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Gemini image analysis failed");
+    const result=data.result||{};
+    const applied=applyAiResult(result);
+    await putState("lastAiResult",{taskId,result,applied,completedAt:Date.now()});
+    await removeOutbox(taskId).catch(()=>{});
+    await removeMedia(taskId).catch(()=>{});
+    const state=document.getElementById("photoState");
+    if(state)state.textContent=(applied.category||applied.itemType)?"✓ AI result synced — "+applied.itemType+(Number.isFinite(applied.confidence)? " · "+Math.round(applied.confidence*100)+"%":""):"✓ AI analyzed";
+    toast("✓ Photo analysis complete"+(applied.itemType?" — "+applied.itemType:""));
+    return result;
+  }
+  async function predictPriceFromForm(){
+    const category=document.getElementById("cat")?.value.trim(),itemType=document.getElementById("itemType")?.value.trim();
+    const weightText=document.getElementById("weight")?.value.trim(),condition=document.getElementById("cond")?.value||"unknown";
+    const weightKgValue=weightKg(weightText);
+    const state=document.getElementById("pricePredictState"),btn=document.getElementById("predictPrice");
+    const taskId="price:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    const params={category,itemType,weightKg:weightKgValue,condition,location:profile?.area||"India"};
+    if(!category||!weightKgValue){toast("Enter category and weight first.");return;}
+    if(state)state.textContent=navigator.onLine?"Predicting…":"Pending local save — will sync when online…";
+    if(btn)btn.disabled=true;
+    try{
+      await enqueue({id:taskId,type:"price_prediction",data:{taskId,params}});
+      if(navigator.onLine)await processPriceTask(taskId,params);
+      else toast("₹ Price prediction queued for sync");
+    }catch(err){console.error(err);toast("Price prediction queue failed: "+err.message);}
+    finally{if(btn)btn.disabled=false;}
+  }
+  async function processPriceTask(taskId,params){
+    const response=await fetch("/api/predict-price",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(params),credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.detail||data.error||"Price prediction failed");
+    const result=data.result||{};
+    const price=Number(result.estimatedPrice||0);
+    if(price>0){const el=document.getElementById("askingPrice");if(el){el.value=Math.round(price);el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));}}
+    await putState("lastPricePrediction",{taskId,params,result,completedAt:Date.now()});
+    await removeOutbox(taskId).catch(()=>{});
+    const state=document.getElementById("pricePredictState");if(state)state.textContent=price>0?"✓ Price synced: ₹"+Math.round(price):"✓ Prediction synced";
+    toast(price>0?"✓ Price estimate: ₹"+Math.round(price):"✓ Price prediction complete");
+    return result;
+  }
+function listScreen(){
+    A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">'+tr("listScrap")+'</p><h1>'+tr("details")+'</h1></div><button class="secondary" data-p="dashboard">← '+tr("dashboard")+'</button></section><div class="form-layout"><section class="panel form-panel"><div class="voice-box"><button type="button" class="mic" id="mic" aria-label="'+tr("tapMic")+'">●</button><div><strong>'+tr("tapMic")+'</strong><p>'+tr("voiceHint")+'</p></div><span id="listenState"></span></div><div class="photo-ai-box"><div class="photo-ai-copy"><strong>📷 '+tr("photoAI")+'</strong><p>'+tr("photoHint")+'</p></div><div class="photo-source-actions"><button type="button" class="secondary" id="takePhoto">📷 '+tr("takePhoto")+'</button><button type="button" class="secondary" id="galleryPhoto">🖼 '+tr("galleryPhoto")+'</button></div><label class="photo-drop" id="photoDrop"><span class="photo-drop-icon">＋</span><span><b>'+tr("uploadPhoto")+'</b><small>'+tr("uploadHint")+'</small></span></label><input id="scrapCamera" type="file" accept="image/*" capture="environment" class="photo-file-hidden"><input id="scrapGallery" type="file" accept="image/*" class="photo-file-hidden"><div id="photoPreviewWrap" class="photo-preview-wrap" hidden><img id="photoPreview" alt="Scrap preview"><button type="button" class="photo-change" id="changePhoto">'+tr("changePhoto")+'</button></div><div class="photo-ai-actions"><button type="button" class="primary" id="analyzePhoto" disabled>'+tr("analyzePhoto")+'</button><span id="photoState"></span></div><small class="photo-disclaimer">'+tr("photoDisclaimer")+'</small></div><form id="scrapForm"><label>'+tr("category")+'<input id="cat" required placeholder="Plastic, paper, metal..."></label><label>'+tr("itemType")+'<input id="itemType" placeholder="Bottle, copper wire, cardboard box..."></label><label>'+tr("weight")+'<input id="weight" required placeholder="10 kg"></label><div id="pricePreview" class="price-preview"></div><div class="price-ai-actions"><button type="button" class="secondary" id="predictPrice">🤖 Predict price with AI</button><span id="pricePredictState"></span></div><label>'+tr("expectedPrice")+'<input id="askingPrice" type="number" min="1" step="1" required placeholder="₹"></label><p class="price-note">'+tr("priceNote")+'</p><label>'+tr("condition")+'<select id="cond"><option>'+tr("good")+'</option><option>'+tr("used")+'</option><option>'+tr("damaged")+'</option></select></label><label>'+tr("address")+'<input id="address" value="'+esc(profile?.area||"")+'" placeholder="Vijayawada"></label><label>'+tr("notes")+'<textarea id="notes" rows="3"></textarea></label><div class="location-actions"><button type="button" class="secondary" id="loc">⌖ '+tr("useLocation")+'</button><button type="button" class="secondary" id="pick">◎ '+tr("chooseMap")+'</button></div><div id="formMap" class="map small-map"></div><div id="where" class="location-line">'+(pos?tr("locationReady"):tr("noLocation"))+'</div><button class="primary full">'+tr("submit")+' <span>→</span></button></form></section><aside class="panel tips"><h2>'+tr("nearbyRecyclers")+'</h2><p>'+tr("priceNote")+'</p><div id="sideMap" class="map"></div></aside></div></main>';
     bindShell();if(window.L)initMap("formMap",true);if(window.L)initMap("sideMap",true);
     const updatePreview=()=>{const cat=document.getElementById("cat").value,weight=document.getElementById("weight").value;const total=indicativeFor(cat,weight),minimum=minimumFor(cat,weight);document.getElementById("pricePreview").innerHTML=cat&&weightKg(weight)>0?'<div><span>'+tr("marketRate")+'</span><b>'+money(rateFor(cat))+' / kg</b></div><div><span>'+tr("minimumPrice")+'</span><b>'+money(minimum)+'</b></div><div><span>'+tr("estimated")+'</span><b>'+money(total)+'</b></div>':'';};
     document.getElementById("cat").oninput=updatePreview;document.getElementById("weight").oninput=updatePreview;updatePreview();
-    const photoInput=document.getElementById("scrapPhoto"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto");
-    const setPhoto=()=>{const file=photoInput.files?.[0];if(!file)return;photoPreview.src=URL.createObjectURL(file);photoWrap.hidden=false;photoDrop.hidden=true;analyzeBtn.disabled=false;document.getElementById("photoState").textContent="";analyzeScrapPhoto(file);};
-    photoInput.onchange=setPhoto;
-    document.getElementById("changePhoto").onclick=()=>photoInput.click();
+    const galleryInput=document.getElementById("scrapGallery"),cameraInput=document.getElementById("scrapCamera"),photoPreview=document.getElementById("photoPreview"),photoWrap=document.getElementById("photoPreviewWrap"),photoDrop=document.getElementById("photoDrop"),analyzeBtn=document.getElementById("analyzePhoto");
+    let selectedPhoto=null;
+    const setPhoto=(file)=>{if(!file)return;selectedPhoto=file;photoPreview.src=URL.createObjectURL(file);photoWrap.hidden=false;photoDrop.hidden=true;analyzeBtn.disabled=false;document.getElementById("photoState").textContent="";analyzeScrapPhoto(file);};
+    galleryInput.onchange=()=>setPhoto(galleryInput.files?.[0]);
+    cameraInput.onchange=()=>setPhoto(cameraInput.files?.[0]);
+    document.getElementById("takePhoto").onclick=()=>cameraInput.click();
+    document.getElementById("predictPrice").onclick=predictPriceFromForm;
+    document.getElementById("galleryPhoto").onclick=()=>galleryInput.click();
+    document.getElementById("changePhoto").onclick=()=>galleryInput.click();
+    photoDrop.onclick=()=>galleryInput.click();
     photoDrop.ondragover=e=>{e.preventDefault();photoDrop.classList.add("dragging");};
     photoDrop.ondragleave=()=>photoDrop.classList.remove("dragging");
-    photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file){const dt=new DataTransfer();dt.items.add(file);photoInput.files=dt.files;setPhoto();}};
-    analyzeBtn.onclick=()=>analyzeScrapPhoto(photoInput.files?.[0]);
+    photoDrop.ondrop=e=>{e.preventDefault();photoDrop.classList.remove("dragging");const file=e.dataTransfer.files?.[0];if(file)setPhoto(file);};
+    analyzeBtn.onclick=()=>analyzeScrapPhoto(selectedPhoto);
+    getState("lastAiResult").then(x=>{if(x?.result&&Date.now()-Number(x.completedAt||0)<30*60*1000)try{applyAiResult(x.result);}catch{};}).catch(()=>{});
+    getState("lastPricePrediction").then(x=>{if(x?.result&&Date.now()-Number(x.completedAt||0)<30*60*1000){const p=Number(x.result.estimatedPrice||0),el=document.getElementById("askingPrice");if(p>0&&el){el.value=Math.round(p);el.dispatchEvent(new Event("input",{bubbles:true}));}}}).catch(()=>{});
     document.getElementById("loc").onclick=getLocation;document.getElementById("pick").onclick=()=>enableMapPick("formMap");document.getElementById("mic").onclick=startVoice;
     document.getElementById("scrapForm").onsubmit=e=>{e.preventDefault();const cat=document.getElementById("cat").value.trim(),itemType=document.getElementById("itemType").value.trim(),weight=document.getElementById("weight").value.trim(),asking=Number(document.getElementById("askingPrice").value);if(!cat||!weight||!Number.isFinite(asking)||asking<=0)return toast(tr("priceRequired"));const r={id:Date.now(),lotReference:"LOT-"+Date.now().toString(36).toUpperCase(),category:cat,itemType,quantity:weight,condition:document.getElementById("cond").value,notes:document.getElementById("notes").value,address:document.getElementById("address").value,lat:pos?.lat||demo.lat,lng:pos?.lng||demo.lng,status:"Pending",collector:profile?.name||"Demo Collector",collectorPhone:accountId,collectedAt:new Date().toISOString(),rate:rateFor(cat),minimumRate:minRateFor(cat),indicativeTotal:indicativeFor(cat,weight),minimumPrice:minimumFor(cat,weight),expectedPrice:asking,askingPrice:asking,currentOffer:asking,priceStatus:"Collector offer",offers:[{by:"collector",price:asking,at:Date.now()}]};requests.unshift(r);save();enqueue({id:"lot:"+r.id,type:"lot",data:{
         lotReference:r.lotReference,collectorPhone:accountId,category:cat,itemType,weightKg:weightKg(weight),condition:r.condition,notes:r.notes,
         address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice
-      }}).catch(()=>{});const file=photoInput.files?.[0];syncBackendLot(r).then(()=>uploadLotPhoto(r,file)).then(()=>{save();syncPending();});toast(tr("pickupCreated"));syncPending();go("requests");};
+      }}).catch(()=>{});const file=selectedPhoto;syncBackendLot(r).then(()=>uploadLotPhoto(r,file)).then(()=>{save();syncPending();});toast(tr("pickupCreated"));syncPending();go("requests");};
   }
+  
   function requestsScreen(){
     cleanDemoRequests(); normalizePricing();
     loadSharedRequests({rerender:true});
@@ -556,8 +696,63 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   async function acceptOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
-    r.agreedPrice=Number(r.currentOffer); r.status="Accepted"; r.priceStatus="Agreed"; save(); render();
-    await acceptWorkflow(r); save(); render();
+    const price=Number(r.currentOffer||r.askingPrice||r.indicativeTotal);
+    if(!Number.isFinite(price)||price<=0)return toast(tr("priceRequired"));
+
+    // Recycler "Buy" must create the transaction directly. Do not call
+    // syncBackendLot() here because that endpoint uses the current session
+    // phone as collector_phone and would overwrite the collector on an
+    // existing lot when a recycler accepts it.
+    r.agreedPrice=price;
+    r.currentOffer=price;
+    r.status="Accepted";
+    r.priceStatus="Agreed";
+    save();
+    render();
+
+    try{
+      if(!r.lotReference)throw new Error("Lot reference missing.");
+      if(!r.recyclerExternalId)r.recyclerExternalId="ACCOUNT:"+accountId;
+      const data=await apiPost("transaction",{
+        lotReference:r.lotReference,
+        recyclerExternalId:r.recyclerExternalId,
+        quotedPrice:price,
+        finalPrice:price
+      });
+      r.transactionReference=data.transaction?.transaction_reference||r.transactionReference;
+      r.status="Accepted";
+      r.agreedPrice=Number(data.transaction?.final_price||price);
+      r.currentOffer=r.agreedPrice;
+      save();
+      toast("✓ Purchase accepted");
+    }catch(err){
+      // Keep the action retryable and queue it for offline sync instead of
+      // silently failing after the UI has changed.
+      r.status="Pending";
+      r.priceStatus=tr("collectorOffer");
+      save();
+      enqueue({
+        id:"transaction:"+r.lotReference+":"+accountId,
+        type:"transaction",
+        data:{
+          transaction_reference:r.transactionReference||"TX-"+Date.now().toString(36).toUpperCase(),
+          lot_reference:r.lotReference,
+          collector_phone:r.collectorPhone||null,
+          recycler_external_id:"ACCOUNT:"+accountId,
+          quoted_price:price,
+          final_price:price,
+          payment_method:null,
+          payment_status:"pending",
+          status:"accepted",
+          collection_address:r.address,
+          collection_latitude:r.lat,
+          collection_longitude:r.lng,
+          collected_at:r.collectedAt||new Date().toISOString()
+        }
+      }).catch(()=>{});
+      toast(err?.message||"Purchase could not be completed. Try again.");
+    }
+    render();
   }
   async function counterOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
@@ -664,17 +859,84 @@ document.addEventListener("DOMContentLoaded", () => {
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
+  async function startRecordedVoice(){
+    const state=document.getElementById("listenState"),mic=document.getElementById("mic");
+    if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){
+      if(state)state.textContent="Voice input is not supported by this browser.";
+      return toast("Voice input is not supported here. Use Chrome/Android or type the details.");
+    }
+    if(voiceRecorder&&voiceRecorder.state==="recording"){voiceRecorder.stop();return;}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      voiceChunks=[];
+      const mime=["audio/webm;codecs=opus","audio/webm","audio/mp4"].find(x=>MediaRecorder.isTypeSupported?.(x))||"";
+      voiceRecorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+      const started=Date.now();
+      if(state)state.textContent="Listening… speak your scrap details";
+      if(mic)mic.classList.add("recording");
+      voiceRecorder.ondataavailable=e=>{if(e.data?.size)voiceChunks.push(e.data);};
+      voiceRecorder.onstop=async()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        if(mic)mic.classList.remove("recording");
+        if(state)state.textContent="Processing voice…";
+        const blob=new Blob(voiceChunks,{type:voiceRecorder.mimeType||mime||"audio/webm"});
+        voiceRecorder=null;
+        if(blob.size<1000){if(state)state.textContent="No voice was captured.";return toast("No voice was captured. Tap the mic and speak clearly.");}
+        try{
+          const dataUrl=await readDataUrl(blob);
+          const response=await fetch("/api/transcribe-voice",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({audio:dataUrl,mimeType:blob.type})});
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data.error||data.detail||"Voice transcription failed.");
+          const spoken=String(data.text||"").trim();
+          if(!spoken)throw new Error("No speech was detected.");
+          parseVoice(spoken);
+          if(state)state.textContent="✓ Voice captured";
+          toast("✓ Voice details added to the form");
+        }catch(err){
+          console.error(err);
+          if(state)state.textContent=err.message||"Voice input failed.";
+          toast(err.message||"Voice input failed. Please try again.");
+        }
+      };
+      voiceRecorder.start();
+      setTimeout(()=>{if(voiceRecorder&&voiceRecorder.state==="recording"&&Date.now()-started>=1000)voiceRecorder.stop();},8000);
+    }catch(err){
+      console.error(err);
+      if(mic)mic.classList.remove("recording");
+      if(state)state.textContent="Microphone permission is required.";
+      toast("Allow microphone permission and try again.");
+    }
+  }
   function startVoice(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR)return toast(tr("voiceUnsupported"));
+    if(!SR)return startRecordedVoice();
     if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
-    recognition=new SR();recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
-    const state=document.getElementById("listenState"), mic=document.getElementById("mic");
+    recognition=new SR();
+    recognition.lang=lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN";
+    recognition.continuous=false;recognition.interimResults=true;recognition.maxAlternatives=3;
+    const state=document.getElementById("listenState"),mic=document.getElementById("mic");
+    let completed=false;
     recognition.onstart=()=>{if(state)state.textContent=tr("listening");if(mic)mic.classList.add("recording");};
-    recognition.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";parseVoice(text.trim());};
-    recognition.onerror=()=>{if(state)state.textContent="";toast(tr("voiceError"));if(mic)mic.classList.remove("recording");};
-    recognition.onend=()=>{if(state)state.textContent="";if(mic)mic.classList.remove("recording");recognition=null;};
-    try{recognition.start();}catch(e){toast(tr("voiceError"));recognition=null;}
+    recognition.onresult=e=>{
+      let text="";
+      for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";
+      text=text.trim();
+      if(text){completed=true;parseVoice(text);}
+    };
+    recognition.onerror=e=>{
+      console.warn("Speech recognition error",e?.error);
+      if(mic)mic.classList.remove("recording");
+      try{recognition.stop();}catch{}
+      recognition=null;
+      if(!completed && ["not-allowed","service-not-allowed","network","audio-capture","no-speech"].includes(e?.error))startRecordedVoice();
+      else if(!completed){if(state)state.textContent="Voice input failed.";toast("Voice input failed. Tap the mic and try again.");}
+    };
+    recognition.onend=()=>{
+      if(state&&!completed)state.textContent="";
+      if(mic)mic.classList.remove("recording");
+      recognition=null;
+    };
+    try{recognition.start();}catch(e){recognition=null;startRecordedVoice();}
   }
   function parseVoice(text){
     const raw=normalizeDigits(text), low=raw.toLowerCase();
@@ -760,20 +1022,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   async function adminScreen(){
     if(role!=="admin"){dashboard();return;}
-    let data={summary:{},collectors:[],recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[]};
+    let data={summary:{},collectors:[],recyclers:[],all_collectors:[],all_recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[],market:[]};
     let error="";
     try{await ensureSession();const res=await fetch("/api/admin?action=overview",{credentials:"same-origin",cache:"no-store"});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||body.detail||"Admin data unavailable.");data=body;}catch(err){error=err.message||"Admin data unavailable.";}
     const s=data.summary||{};
     const stat=(label,value)=>'<section class="panel admin-stat"><span>'+esc(label)+'</span><strong>'+Number(value||0)+'</strong></section>';
     const recyclerCards=(data.recyclers||[]).map(x=>{const docs=Array.isArray(x.recycler_documents)?x.recycler_documents:[],verified=!!x.verification_badge||x.verification_status==="verified";const docLinks=docs.length?docs.map(d=>'<button class="text-btn admin-doc" data-phone="'+esc(x.phone)+'" data-path="'+esc(d.path)+'">📄 '+esc(d.file_name||d.document_type||"Document")+'</button>').join(" "):'<span class="muted">'+tr("noDocuments")+'</span>';return '<article class="panel verify-card"><div class="verify-head"><div><h2>'+esc(x.business_name||x.name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>+91 '+esc(x.phone)+' · '+esc(x.name||"")+'</p></div><span class="verify-status '+esc(x.verification_status||"pending")+'">'+esc(x.verification_status||"pending")+'</span></div><div class="verify-grid"><span><b>'+tr("facilityAddress")+'</b>'+esc(x.facility_address||x.general_location||"—")+'</span><span><b>'+tr("materials")+'</b>'+esc((x.accepted_materials||[]).join(", ")||"—")+'</span><span><b>'+tr("registrationNumber")+'</b>'+esc(x.registration_number||"—")+'</span><span><b>'+tr("gstNumber")+'</b>'+esc(x.gst_number||"—")+'</span><span><b>'+tr("authorizationNumber")+'</b>'+esc(x.authorization_number||"—")+'</span><span><b>'+tr("authorizationType")+'</b>'+esc(x.authorization_type||"—")+'</span><span><b>'+tr("authorizationExpiry")+'</b>'+esc(x.authorization_expiry||"—")+'</span><span><b>'+tr("contactEmail")+'</b>'+esc(x.contact_email||"—")+'</span><span><b>'+tr("serviceArea")+'</b>'+esc(x.service_area||"—")+'</span></div><div class="doc-list"><strong>'+tr("documents")+':</strong> '+docLinks+'</div><div class="admin-actions">'+(verified?'<button class="secondary admin-action" data-decision="suspend" data-phone="'+esc(x.phone)+'">'+tr("suspend")+'</button>':'<button class="primary admin-action" data-decision="verify" data-phone="'+esc(x.phone)+'">★ '+tr("verify")+'</button><button class="secondary admin-action" data-decision="reject" data-phone="'+esc(x.phone)+'">'+tr("reject")+'</button>')+'</div></article>';}).join("")||'<div class="empty panel">'+tr("noRecyclers")+'</div>';
     const table=(rows,cols)=>rows.length?'<div class="admin-table-wrap"><table class="admin-table"><thead><tr>'+cols.map(c=>'<th>'+esc(c[0])+'</th>').join("")+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+cols.map(c=>'<td>'+esc(String(typeof c[1]==="function"?c[1](row):row[c[1]]??"—"))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>':'<div class="empty">'+tr("noRequests")+'</div>';
-    A.innerHTML=topbar()+'<main class="page admin-page"><section class="section-title"><div><p class="eyebrow">🛡 '+tr("adminPanel")+'</p><h1>'+tr("summary")+'</h1><p>Review recycler verification and monitor platform activity.</p></div><button class="secondary" id="adminRefresh">↻ '+tr("refresh")+'</button></section>'+(error?'<div class="panel error-panel">'+esc(error)+'</div>':'')+'<div class="admin-stats">'+stat(tr("collectors"),s.collectors)+stat(tr("recyclers"),s.recyclers)+stat(tr("pendingVerification"),s.pending_recycler_verification)+stat(tr("verifiedRecyclers"),s.verified_recyclers)+stat(tr("lots"),s.lots)+stat(tr("offers"),s.offers)+stat(tr("transactions"),s.transactions)+stat(tr("earnings"),s.earnings)+'</div><section><div class="section-title admin-section-title"><div><h1>★ '+tr("verifyRecyclers")+'</h1><p>Review submitted recycler details and documents.</p></div></div><div class="verify-list">'+recyclerCards+'</div></section><section class="admin-data"><div class="section-title admin-section-title"><div><h1>'+tr("allData")+'</h1><p>Collectors, requests, offers, transactions, handovers and earnings.</p></div></div><details open><summary>'+tr("collectors")+' ('+(data.collectors||[]).length+')</summary>'+table(data.collectors||[],[["Phone","phone"],["Name","name"],["Language","preferred_language"],["Location","general_location"],["Active",r=>r.active]])+'</details><details><summary>'+tr("lots")+' ('+(data.lots||[]).length+')</summary>'+table(data.lots||[],[["Lot","lot_reference"],["Collector","collector_phone"],["Material","material_category"],["Weight","approximate_weight_kg"],["Quoted","quoted_value"],["Final","final_sale_value"],["Status","status"],["Collected","collected_at"]])+'</details><details><summary>'+tr("offers")+' ('+(data.offers||[]).length+')</summary>'+table(data.offers||[],[["Lot","lot_reference"],["Role","actor_role"],["Actor","actor_ref"],["Price","price"],["Time","created_at"]])+'</details><details><summary>'+tr("transactions")+' ('+(data.transactions||[]).length+')</summary>'+table(data.transactions||[],[["Transaction","transaction_reference"],["Lot","lot_reference"],["Collector","collector_phone"],["Recycler","recycler_external_id"],["Quoted","quoted_price"],["Final","final_price"],["Payment","payment_status"],["Status","status"]])+'</details><details><summary>'+tr("handovers")+' ('+(data.handovers||[]).length+')</summary>'+table(data.handovers||[],[["Transaction","transaction_reference"],["Handover","handover_reference"],["Weight","actual_weight_kg"],["Collector confirmed","collector_confirmed"],["Recycler confirmed","recycler_confirmed"],["Time","handover_at"]])+'</details><details><summary>'+tr("earnings")+' ('+(data.earnings||[]).length+')</summary>'+table(data.earnings||[],[["Transaction","transaction_reference"],["Collector","collector_phone"],["Amount","amount"],["Status","status"],["Method","payment_method"],["Paid","paid_at"]])+'</details></section></main>';
+    const marketRows=data.market||[];
+    const marketTable=marketRows.length?'<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Item</th><th>Category</th><th>City</th><th>Buy / kg</th><th>Sell / kg</th><th>Market range</th><th>Unit</th><th>Source</th><th>Updated</th><th>Use</th></tr></thead><tbody>'+marketRows.map((m,i)=>'<tr><td>'+esc(m.material_name)+'</td><td>'+esc(m.sub_category||"—")+'</td><td>'+esc((m.city||"")+" / "+(m.state||""))+'</td><td>'+money(m.buying_price)+'</td><td>'+money(m.selling_price)+'</td><td>'+money(m.market_min)+' – '+money(m.market_max)+'</td><td>'+esc(m.unit||"kg")+'</td><td>'+esc(m.source||"Admin")+'</td><td>'+esc(m.observed_at?new Date(m.observed_at).toLocaleString("en-IN"):"—")+'</td><td><button class="text-btn market-use" data-index="'+i+'">Edit</button></td></tr>').join("")+'</tbody></table></div>':'<div class="empty">No admin market prices yet. Add the first item below.</div>';
+    A.innerHTML=topbar()+'<main class="page admin-page"><section class="section-title"><div><p class="eyebrow">🛡 '+tr("adminPanel")+'</p><h1>'+tr("summary")+'</h1><p>Full platform control: recycler verification, users, requests, transactions, earnings and the official market price board.</p></div><button class="secondary" id="adminRefresh">↻ '+tr("refresh")+'</button></section>'+(error?'<div class="panel error-panel">'+esc(error)+'</div>':'')+
+      '<div class="admin-stats">'+stat(tr("collectors"),s.collectors)+stat(tr("recyclers"),s.recyclers)+stat(tr("pendingVerification"),s.pending_recycler_verification)+stat(tr("verifiedRecyclers"),s.verified_recyclers)+stat(tr("lots"),s.lots)+stat(tr("offers"),s.offers)+stat(tr("transactions"),s.transactions)+stat(tr("earnings"),s.earnings)+'</div>'+
+      '<section><div class="section-title admin-section-title"><div><h1>★ '+tr("verifyRecyclers")+'</h1><p>Review submitted recycler details and documents before giving or removing the verified badge.</p></div></div><div class="verify-list">'+recyclerCards+'</div></section>'+
+      '<section class="admin-data"><div class="section-title admin-section-title"><div><h1>👥 User management</h1><p>View all collector and recycler accounts, deactivate/delete accounts, and restore deactivated accounts.</p></div></div><div class="panel"><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Role</th><th>Phone</th><th>Name / Business</th><th>Status</th><th>Verification</th><th>Action</th></tr></thead><tbody>'+((data.all_collectors||[]).concat(data.all_recyclers||[]).map(x=>{const isR=x.role==="recycler"||("business_name" in x);const active=x.active!==false;return '<tr><td>'+esc(isR?"Recycler":"Collector")+'</td><td>'+esc(x.phone||"—")+'</td><td>'+esc(x.business_name||x.name||"—")+'</td><td>'+esc(active?"Active":"Deleted")+'</td><td>'+esc(isR?(x.verification_status||"pending"):"—")+'</td><td>'+(active?'<button class="secondary admin-user-delete" data-phone="'+esc(x.phone)+'">Delete</button>':'<button class="primary admin-user-restore" data-phone="'+esc(x.phone)+'">Restore</button>')+'</td></tr>'}).join("")||'<tr><td colspan="6">No users.</td></tr>')+'</tbody></table></div></div></section>'+
+      '<section class="admin-data"><div class="section-title admin-section-title"><div><h1>₹ Official market prices</h1></h1><p>Only prices entered here are published to the shared market board. Collectors and recyclers receive the latest admin-entered item and price.</p></div></div>'+
+      '<div class="panel" style="margin-bottom:14px"><form id="marketForm" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px"><label>Market item<input id="miName" required placeholder="Copper wire"></label><label>Sub-category<input id="miSub" placeholder="Bare bright copper"></label><label>City<input id="miCity" value="Vijayawada"></label><label>State<input id="miState" value="Andhra Pradesh"></label><label>Buying price / unit<input id="miBuy" type="number" min="0" step="0.01" required></label><label>Selling price / unit<input id="miSell" type="number" min="0" step="0.01"></label><label>Market minimum<input id="miMin" type="number" min="0" step="0.01"></label><label>Market maximum<input id="miMax" type="number" min="0" step="0.01"></label><label>Unit<select id="miUnit"><option value="kg">kg</option><option value="piece">piece</option><option value="ton">ton</option></select></label><label style="grid-column:span 2">Source / note<input id="miSource" value="Admin verified market price"></label><div style="display:flex;align-items:end;gap:8px"><button class="primary" type="submit" id="marketSave">Publish market price</button><button class="secondary" type="button" id="marketClear">Clear</button></div></form><p id="marketMsg" class="muted" style="margin:10px 0 0">Publishing creates a new dated price observation, so the previous price remains in history.</p></div>'+marketTable+'</section>'+
+      '<section class="admin-data"><div class="section-title admin-section-title"><div><h1>'+tr("allData")+'</h1><p>Collectors, recycler accounts, requests, offers, transactions, handovers and earnings.</p></div></div><details open><summary>'+tr("collectors")+' ('+(data.collectors||[]).length+')</summary>'+table(data.collectors||[],[["Phone","phone"],["Name","name"],["Language","preferred_language"],["Location","general_location"],["Active",r=>r.active]])+'</details><details><summary>'+tr("recyclers")+' ('+(data.recyclers||[]).length+')</summary>'+table(data.recyclers||[],[["Phone","phone"],["Name","name"],["Business","business_name"],["Location","general_location"],["Verification","verification_status"],["Verified badge","verification_badge"],["Email","contact_email"]])+'</details><details><summary>'+tr("lots")+' ('+(data.lots||[]).length+')</summary>'+table(data.lots||[],[["Lot","lot_reference"],["Collector","collector_phone"],["Material","material_category"],["Weight","approximate_weight_kg"],["Quoted","quoted_value"],["Final","final_sale_value"],["Status","status"],["Collected","collected_at"]])+'</details><details><summary>'+tr("offers")+' ('+(data.offers||[]).length+')</summary>'+table(data.offers||[],[["Lot","lot_reference"],["Role","actor_role"],["Actor","actor_ref"],["Price","price"],["Time","created_at"]])+'</details><details><summary>'+tr("transactions")+' ('+(data.transactions||[]).length+')</summary>'+table(data.transactions||[],[["Transaction","transaction_reference"],["Lot","lot_reference"],["Collector","collector_phone"],["Recycler","recycler_external_id"],["Quoted","quoted_price"],["Final","final_price"],["Payment","payment_status"],["Status","status"]])+'</details><details><summary>'+tr("handovers")+' ('+(data.handovers||[]).length+')</summary>'+table(data.handovers||[],[["Transaction","transaction_reference"],["Handover","handover_reference"],["Weight","actual_weight_kg"],["Collector confirmed","collector_confirmed"],["Recycler confirmed","recycler_confirmed"],["Time","handover_at"]])+'</details><details><summary>'+tr("earnings")+' ('+(data.earnings||[]).length+')</summary>'+table(data.earnings||[],[["Transaction","transaction_reference"],["Collector","collector_phone"],["Amount","amount"],["Status","status"],["Method","payment_method"],["Paid","paid_at"]])+'</details></section></main>';
     bindShell();
     document.getElementById("adminRefresh").onclick=()=>render();
+    const clearMarketForm=()=>{["miName","miSub","miBuy","miSell","miMin","miMax"].forEach(id=>document.getElementById(id).value="");document.getElementById("miCity").value="Vijayawada";document.getElementById("miState").value="Andhra Pradesh";document.getElementById("miUnit").value="kg";document.getElementById("miSource").value="Admin verified market price";};
+    document.getElementById("marketClear").onclick=clearMarketForm;
+    document.getElementById("marketForm").onsubmit=async(e)=>{e.preventDefault();const msg=document.getElementById("marketMsg"),btn=document.getElementById("marketSave");msg.textContent="Publishing…";btn.disabled=true;try{const payload={material_name:document.getElementById("miName").value,sub_category:document.getElementById("miSub").value,city:document.getElementById("miCity").value,state:document.getElementById("miState").value,buying_price:document.getElementById("miBuy").value,selling_price:document.getElementById("miSell").value,market_min:document.getElementById("miMin").value,market_max:document.getElementById("miMax").value,unit:document.getElementById("miUnit").value,source:document.getElementById("miSource").value};const res=await fetch("/api/admin?action=save-market-item",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(payload)});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||body.detail||"Could not publish market price.");msg.textContent="✓ Published. Refreshing the official market board…";clearMarketForm();await loadMarketData({force:true});render();}catch(err){msg.textContent="⚠ "+(err.message||"Could not publish market price.");}finally{btn.disabled=false;}};
+    A.querySelectorAll(".market-use").forEach(b=>b.onclick=()=>{const m=marketRows[Number(b.dataset.index)];if(!m)return;document.getElementById("miName").value=m.material_name||"";document.getElementById("miSub").value=m.sub_category||"";document.getElementById("miCity").value=m.city||"Vijayawada";document.getElementById("miState").value=m.state||"Andhra Pradesh";document.getElementById("miBuy").value=m.buying_price??"";document.getElementById("miSell").value=m.selling_price??"";document.getElementById("miMin").value=m.market_min??"";document.getElementById("miMax").value=m.market_max??"";document.getElementById("miUnit").value=m.unit||"kg";document.getElementById("miSource").value=m.source||"Admin verified market price";window.scrollTo({top:0,behavior:"smooth"});});
     A.querySelectorAll(".admin-action").forEach(b=>b.onclick=async()=>{const note=prompt("Verification note (optional):","")||"";if(!confirm(b.dataset.decision.toUpperCase()+" this recycler?"))return;try{const res=await fetch("/api/admin?action=verify-recycler",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,decision:b.dataset.decision,note})});const body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"Verification failed.");render();}catch(err){toast(err.message||"Verification failed.");}});
+    A.querySelectorAll(".admin-user-delete").forEach(b=>b.onclick=async()=>{if(!confirm("Delete/deactivate this user account?"))return;try{const r=await fetch("/api/admin?action=delete-user",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||j.detail||"Could not delete user.");await load();}catch(e){toast(e.message||"Could not delete user.");}});
+    A.querySelectorAll(".admin-user-restore").forEach(b=>b.onclick=async()=>{if(!confirm("Restore this user account?"))return;try{const r=await fetch("/api/admin?action=set-user-active",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,active:true})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||j.detail||"Could not restore user.");await load();}catch(e){toast(e.message||"Could not restore user.");}});
     A.querySelectorAll(".admin-doc").forEach(b=>b.onclick=async()=>{try{const res=await fetch("/api/admin?action=document-url",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:b.dataset.phone,path:b.dataset.path})});const body=await res.json();if(!res.ok)throw new Error(body.error||"Could not open document.");window.open(body.url,"_blank","noopener");}catch(err){toast(err.message||"Could not open document.");}});
   }
-
   function render(){
     if(!user?.verified){return auth();}
     if(!role)return roleScreen();

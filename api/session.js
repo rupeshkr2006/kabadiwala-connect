@@ -43,13 +43,45 @@ export default async function handler(req,res){
     if(!/^\d{10}$/.test(clean)||String(otp||"")!=="123456")return res.status(401).json({error:"Invalid demo credentials."});
 
     const persistedRole=await registeredRole(clean);
-    const requestedRole=role==="recycler"?"recycler":role==="admin"?"admin":"collector";
-    const sessionRole=persistedRole||requestedRole;
-    if(requestedRole==="admin"&&persistedRole!=="admin")return res.status(403).json({error:"This account is not an admin."});
+    const hasRequestedRole=role==="collector"||role==="recycler"||role==="admin";
+    const requestedRole=role==="recycler"?"recycler":role==="admin"?"admin":role==="collector"?"collector":null;
+    const configuredAdmin=String(process.env.ADMIN_PHONE||"9990000000").replace(/\D/g,"");
+    const isAdminAccount=persistedRole==="admin"||clean===configuredAdmin;
+    if(requestedRole==="admin"&&!isAdminAccount)return res.status(403).json({error:"This account is not an admin."});
+
+    // Existing accounts always keep their registered role. A role supplied by
+    // the client cannot silently turn an existing collector into a recycler.
+    // For a brand-new phone number, the first OTP verification intentionally
+    // returns no role so the UI can show the collector/recycler choice.
+    let sessionRole=persistedRole||requestedRole||"pending";
+    let isNewAccount=!persistedRole;
+
+    // Persist the role selected during first-time setup so future logins do
+    // not ask the user to choose collector/recycler again.
+    if(isNewAccount&&requestedRole&&requestedRole!=="admin"){
+      const url=String(process.env.SUPABASE_URL||"").replace(/\/$/,"");
+      const key=secret();
+      if(url&&key){
+        const headers={apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json","Prefer":"return=representation"};
+        const check=await fetch(url+"/rest/v1/profiles?phone=eq."+encodeURIComponent(clean)+"&select=id,role&limit=1",{headers});
+        const rows=check.ok?await check.json().catch(()=>[]):[];
+        if(rows?.[0]){
+          if(rows[0].role&&["collector","recycler","admin"].includes(rows[0].role))sessionRole=rows[0].role;
+        }else{
+          const created=await fetch(url+"/rest/v1/profiles",{method:"POST",headers,body:JSON.stringify({phone:clean,role:requestedRole,name:"New User",active:true,profile_source:"app"})});
+          if(!created.ok){
+            const detail=await created.text().catch(()=> "");
+            return res.status(502).json({error:"Could not create account.",detail});
+          }
+          sessionRole=requestedRole;
+        }
+        isNewAccount=false;
+      }
+    }
 
     const p={phone:clean,role:sessionRole,iat:Date.now(),exp:Date.now()+maxAge*1000};
     res.setHeader("Set-Cookie",cookie(tokenFor(p)));
-    return res.status(200).json({ok:true,role:p.role});
+    return res.status(200).json({ok:true,role:p.role==="pending"?null:p.role,newAccount:isNewAccount});
   }
   if(req.method==="GET"){const s=getSession(req);return res.status(200).json({authenticated:!!s,role:s?.role||null});}
   if(req.method==="DELETE"){res.setHeader("Set-Cookie",cookie("",0));return res.status(200).json({ok:true});}

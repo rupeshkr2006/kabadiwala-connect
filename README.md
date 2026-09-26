@@ -11,6 +11,10 @@ This repository is configured for native Vercel static hosting. The site entry p
 - Pickup request workflow
 - OpenStreetMap/Leaflet location maps
 - Browser geolocation with map/address fallback
+- Take Photo and Choose from Gallery scrap capture
+- Photo analysis with automatic form-field mapping
+- Voice scrap-detail entry with browser or server transcription fallback
+- Offline queue for photo analysis, price prediction and writes
 - Browser speech recognition for scrap details
 
 ## Run locally
