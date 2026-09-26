@@ -78,3 +78,9 @@
 .offline-ai-install{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border:1px dashed rgba(23,107,73,.35);border-radius:12px;background:rgba(23,107,73,.04)}
 .offline-ai-install span{font-size:.78rem;opacity:.78}
 @media(max-width:640px){.offline-ai-install{align-items:flex-start}.offline-ai-install .secondary{width:100%}}
+
+
+.admin-doc-grid{display:grid;gap:8px;margin-top:8px}
+.admin-doc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid #d9e5df;border-radius:10px;background:#f8fbf9}
+.admin-doc-row>b,.admin-doc-row strong{font-weight:700}
+.verify-doc-missing{font-size:.85rem;color:#9b3d35;font-weight:600}
