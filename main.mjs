@@ -379,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function topbar(){
     const adminNav=role==="admin"?'<button data-p="admin">🛡 '+tr("admin")+'</button>':'';
     const currentHash=location.hash.replace("#","")||"dashboard";
-    const showBack=!["dashboard","admin","login","otp","role","setup"].includes(currentHash);
+    const showBack=!["dashboard","admin","login","otp"].includes(currentHash);
 
     const isAdmin=role==="admin";
     return '<header class="top"><a class="brand" href="'+(isAdmin?"#admin":"#dashboard")+'" aria-label="'+tr("brand")+'"><span class="brand-mark">↻</span><span>'+tr("brand")+'</span></a><nav class="nav">'+(showBack?'<button class="global-back" id="globalBack">← Back</button>':'')+'<span id="netStatus" class="net-status">● '+(navigator.onLine?"Online":"Offline")+'</span><button data-p="'+(isAdmin?"admin":"dashboard")+'">'+(isAdmin?"🛡 "+tr("admin"):tr("dashboardNav"))+'</button>'+(isAdmin?'':'<button data-p="market">₹ Market</button><button data-p="recyclers">♻ Recyclers</button>'+(role==="collector"?'<button data-p="earnings">₹ '+tr("earnings")+'</button>':'')+'<button data-p="safety">'+(lang==="hi"?"सुरक्षा":lang==="mr"?"सुरक्षा":"Safety")+'</button><button data-p="requests">'+tr("requests")+'</button>')+'<button class="profile-pill" data-p="profile">◉ '+esc(profile?.name||profile?.business||"Profile")+'</button><select class="lang" aria-label="'+tr("language")+'"><option value="en">EN</option><option value="hi">हि</option><option value="mr">मर</option></select></nav></header>';
