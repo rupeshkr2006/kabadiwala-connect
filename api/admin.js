@@ -37,11 +37,11 @@ export default async function handler(req,res){
   const action=String(req.query?.action||"");
   try{
     if(req.method==="GET"&&action==="overview"){
-      const [collectors,recyclers,allCollectors,allRecyclers,lots,offers,transactions,handovers,earnings]=await Promise.all([
+      const [collectors,recyclers,allCollectors,allRecyclers,lots,offers,transactions,handovers,earnings,market]=await Promise.all([
         rest("/rest/v1/profiles?role=eq.collector&active=eq.true&select=id,phone,name,preferred_language,general_location,active,created_at,updated_at&order=created_at.desc&limit=200").catch(()=>[]),
         rest("/rest/v1/profiles?role=eq.recycler&active=eq.true&select=id,phone,name,business_name,general_location,facility_address,preferred_language,accepted_materials,pickup_radius_km,latitude,longitude,active,registration_number,gst_number,authorization_number,authorization_type,authorization_expiry,contact_email,pickup_available,service_area,offered_rate_notes,recycler_documents,verification_status,verification_badge,verified_at,verified_by,verification_note,created_at,updated_at&order=created_at.desc&limit=200").catch(()=>[]),
-        rest("/rest/v1/profiles?role=eq.collector&select=id,phone,name,preferred_language,general_location,active,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
-        rest("/rest/v1/profiles?role=eq.recycler&select=id,phone,name,business_name,general_location,facility_address,active,verification_status,verification_badge,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
+        rest("/rest/v1/profiles?role=eq.collector&select=id,phone,name,preferred_language,general_location,active,role,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
+        rest("/rest/v1/profiles?role=eq.recycler&select=id,phone,name,business_name,general_location,facility_address,active,role,verification_status,verification_badge,recycler_documents,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
         rest("/rest/v1/platform_lots?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_offers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_transactions?select=*&order=created_at.desc&limit=300").catch(()=>[]),
@@ -53,7 +53,7 @@ export default async function handler(req,res){
       const verified=(recyclers||[]).filter(x=>String(x.verification_status)==="verified").length;
       return res.status(200).json({
         summary:{collectors:(collectors||[]).length,recyclers:(recyclers||[]).length,pending_recycler_verification:pending,verified_recyclers:verified,lots:(lots||[]).length,offers:(offers||[]).length,transactions:(transactions||[]).length,handovers:(handovers||[]).length,earnings:(earnings||[]).length},
-        collectors:collectors||[],recyclers:recyclers||[],all_collectors:allCollectors||[],all_recyclers:allRecyclers||[],lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:market||[],
+        collectors:collectors||[],recyclers:recyclers||[],all_collectors:(allCollectors&&allCollectors.length?allCollectors:collectors||[]),all_recyclers:(allRecyclers&&allRecyclers.length?allRecyclers:recyclers||[]),lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:market||[],
         generated_at:new Date().toISOString()
       });
     }
