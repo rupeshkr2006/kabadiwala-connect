@@ -1044,7 +1044,7 @@ function listScreen(){
     if(catEl&&weightEl){catEl.dispatchEvent(new Event("input"));weightEl.dispatchEvent(new Event("input"));}
     toast("✓ "+raw);
   }
-  async async function adminScreen(){
+  async function adminScreen(){
     if(role!=="admin"){dashboard();return;}
     let data={summary:{},collectors:[],recyclers:[],all_collectors:[],all_recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[],market:[]};
     let error="";
