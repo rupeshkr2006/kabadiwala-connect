@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return '<div class="price-box"><div><span>Indicative</span><b>'+money(r.indicativeTotal)+'</b><small>'+money(r.rate)+' / kg</small></div><div><span>Current offer</span><b>'+offerLabel(r)+'</b><small>'+esc(r.priceStatus||"")+'</small></div>'+(showInput?'<label class="offer-input"><span>Counter offer</span><input data-offer-input="'+r.id+'" type="number" min="1" step="1" value="'+esc(r.currentOffer||r.askingPrice||r.indicativeTotal)+'" inputmode="numeric"></label>':'')+'</div>';
   }
 
-  async async function loadRecyclerData({rerender=false,force=false}={}){
+  async function loadRecyclerData({rerender=false,force=false}={}){
     try{
       if(!force){const cached=await getState("recyclers").catch(()=>null);if(Array.isArray(cached))recyclers=cached;}
       if(!navigator.onLine)return;
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
     bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}
   }
 
-  async async function loadSharedRequests({rerender=false}={}){
+  async function loadSharedRequests({rerender=false}={}){
     if(sharedRefreshing||!navigator.onLine||!user?.verified)return;
     sharedRefreshing=true;
     try{
@@ -236,14 +236,14 @@ document.addEventListener("DOMContentLoaded", () => {
   T.hi.matchRecycler="रीसायकलर खोजें"; T.hi.recommended="सुझाए गए रीसायकलर"; T.hi.select="चुनें"; T.hi.confirmHandover="हैंडओवर की पुष्टि करें"; T.hi.payment="भुगतान दर्ज करें"; T.hi.earnings="कमाई"; T.hi.totalEarned="कुल कमाई"; T.hi.paid="भुगतान हुआ"; T.hi.pendingAmount="पेंडिंग"; T.hi.noEarnings="अभी कोई कमाई नहीं।"; T.hi.workflowNote="हैंडओवर के लिए दोनों पक्षों की पुष्टि जरूरी है।"; T.hi.paidSuccess="भुगतान दर्ज हुआ";
   T.mr.matchRecycler="रिसायकलर शोधा"; T.mr.recommended="सुचवलेले रिसायकलर"; T.mr.select="निवडा"; T.mr.confirmHandover="हँडओव्हरची पुष्टी करा"; T.mr.payment="पेमेंट नोंदवा"; T.mr.earnings="कमाई"; T.mr.totalEarned="एकूण कमाई"; T.mr.paid="पेड"; T.mr.pendingAmount="प्रलंबित"; T.mr.noEarnings="अजून कमाई नाही."; T.mr.workflowNote="हँडओव्हरसाठी दोन्ही बाजूंची पुष्टी आवश्यक आहे."; T.mr.paidSuccess="पेमेंट नोंदले";
 
-  async async function saveRecyclerProfileRemote(){
+  async function saveRecyclerProfileRemote(){
     const p=profile||{};
     const payload={name:p.name,business_name:p.business,preferred_language:lang,general_location:p.area,facility_address:p.facilityAddress||p.area,accepted_materials:String(p.materials||"").split(",").map(x=>x.trim()).filter(Boolean),pickup_radius_km:Number(String(p.radius||"5").match(/\d+/)?.[0]||5),latitude:pos?.lat??null,longitude:pos?.lng??null,pickup_available:p.pickupAvailable!==false,service_area:p.serviceArea,registration_number:p.registrationNumber,gst_number:p.gstNumber,authorization_number:p.authorizationNumber,authorization_type:p.authorizationType,authorization_expiry:p.authorizationExpiry||null,contact_email:p.contactEmail,offered_rate_notes:p.offeredRateNotes};
     const res=await fetch("/api/recycler-profile?action=save",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(payload)});
     const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Recycler profile save failed.");
     profile={...profile,verificationStatus:data.profile?.verification_status||"pending",verificationBadge:!!data.profile?.verification_badge,documents:data.profile?.recycler_documents||profile?.documents||[]};save();return data.profile;
   }
-  async async function loadRecyclerProfileRemote(){
+  async function loadRecyclerProfileRemote(){
     if(role!=="recycler"||!navigator.onLine)return;
     try{await ensureSession();const res=await fetch("/api/recycler-profile",{credentials:"same-origin",cache:"no-store"});const data=await res.json().catch(()=>({}));if(!res.ok||!data.profile)return;const p=data.profile;profile={...profile,name:p.name||profile?.name,business:p.business_name||profile?.business,area:p.general_location||profile?.area,facilityAddress:p.facility_address||profile?.facilityAddress,materials:Array.isArray(p.accepted_materials)?p.accepted_materials.join(", "):profile?.materials,radius:(p.pickup_radius_km||5)+" km",registrationNumber:p.registration_number||"",gstNumber:p.gst_number||"",authorizationNumber:p.authorization_number||"",authorizationType:p.authorization_type||"",authorizationExpiry:p.authorization_expiry||"",contactEmail:p.contact_email||"",pickupAvailable:p.pickup_available!==false,serviceArea:p.service_area||"",offeredRateNotes:p.offered_rate_notes||"",verificationStatus:p.verification_status||"pending",verificationBadge:!!p.verification_badge,documents:p.recycler_documents||[]};save();}catch(err){console.warn("Recycler profile refresh:",err);}
   }
@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sessionReady=true;return true;
   }
 
-  async async function apiPost(action,body){
+  async function apiPost(action,body){
     await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),credentials:"same-origin"});
     const data=await response.json().catch(()=>({}));
@@ -264,36 +264,36 @@ document.addEventListener("DOMContentLoaded", () => {
     return data;
   }
 
-  async async function apiGet(action){
+  async function apiGet(action){
     await ensureSession();
     const response=await fetch("/api/workflow?action="+encodeURIComponent(action),{credentials:"same-origin",cache:"no-store"});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.detail||data.error||"Request failed");
     return data;
   }
-  async async function readDataUrl(file){
+  async function readDataUrl(file){
     return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
   }
-  async async function syncBackendLot(r){
+  async function syncBackendLot(r){
     if(!r.lotReference)r.lotReference="LOT-"+Date.now().toString(36).toUpperCase();
     const payload={lotReference:r.lotReference,category:r.category,itemType:r.itemType,weightKg:weightKg(r.quantity),condition:r.condition,notes:r.notes,address:r.address,lat:r.lat,lng:r.lng,indicativeTotal:r.indicativeTotal,expectedPrice:r.expectedPrice,status:String(r.status||"Pending").toLowerCase(),collectedAt:r.collectedAt||new Date().toISOString()};
     try{await apiPost("lot",payload);return true;}catch(err){enqueue({id:"lot:"+r.lotReference,type:"lot",data:payload}).catch(()=>{});return false;}
   }
-  async async function uploadLotPhoto(r,file){
+  async function uploadLotPhoto(r,file){
     if(!file||!navigator.onLine||!r.lotReference)return;
     try{const image=await readDataUrl(file);const data=await apiPost("photo",{lotReference:r.lotReference,image});r.imageUrl=data.image_url;}catch(err){console.warn("Photo upload:",err);}
   }
   async function chooseRecycler(r){
     try{const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)});const first=data.rows?.[0];if(first){r.recyclerExternalId=first.external_id;r.recyclerName=first.facility_name;}return data;}catch{return {rows:[]};}
   }
-  async async function acceptWorkflow(r){
+  async function acceptWorkflow(r){
     await syncBackendLot(r);
     if(role==="recycler"&&!r.recyclerExternalId)r.recyclerExternalId="ACCOUNT:"+accountId;
     if(role!=="recycler"&&!r.recyclerExternalId)await chooseRecycler(r);
     try{const data=await apiPost("transaction",{lotReference:r.lotReference,recyclerExternalId:r.recyclerExternalId||(role==="recycler"?"ACCOUNT:"+accountId:null),quotedPrice:r.currentOffer,finalPrice:r.currentOffer});r.transactionReference=data.transaction?.transaction_reference||r.transactionReference;}
     catch{if(!r.transactionReference)r.transactionReference="TX-"+Date.now().toString(36).toUpperCase();enqueue({id:"transaction:"+r.transactionReference,type:"transaction",data:{transaction_reference:r.transactionReference,lot_reference:r.lotReference,collector_phone:accountId,recycler_external_id:r.recyclerExternalId||null,quoted_price:r.currentOffer,final_price:r.currentOffer,payment_method:null,payment_status:"pending",status:"accepted",collection_address:r.address,collection_latitude:r.lat,collection_longitude:r.lng,collected_at:r.collectedAt||new Date().toISOString()}}).catch(()=>{});}
   }
-  async async function showMatches(r){
+  async function showMatches(r){
     const data=await apiPost("match",{category:r.category,lat:r.lat,lng:r.lng,weightKg:weightKg(r.quantity)}).catch(()=>({rows:recyclers.filter(x=>(x.materials_accepted||[]).some(m=>String(m).toLowerCase().includes(String(r.category||"").toLowerCase())||String(r.category||"").toLowerCase().includes(String(m).toLowerCase())||String(r.category||"").toLowerCase()==="e-waste"))}));
     const rows=data.rows||[];const old=document.getElementById("matchModal");if(old)old.remove();
     const modal=document.createElement("div");modal.id="matchModal";modal.className="map-modal";
@@ -302,18 +302,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.appendChild(modal);document.getElementById("closeMatch").onclick=()=>modal.remove();modal.onclick=e=>{if(e.target===modal)modal.remove();};
     modal.querySelectorAll("[data-select-recycler]").forEach(b=>b.onclick=()=>{const x=rows.find(q=>q.external_id===b.dataset.selectRecycler);if(x){r.recyclerExternalId=x.external_id;r.recyclerName=x.facility_name;save();toast(x.facility_name);modal.remove();render();}});
   }
-  async async function confirmHandover(r){
+  async function confirmHandover(r){
     if(!r.transactionReference)await acceptWorkflow(r);
     if(!r.transactionReference)return toast(tr("required"));
     try{const data=await apiPost("handover",{transactionReference:r.transactionReference,actualWeightKg:weightKg(r.quantity),lat:pos?.lat||r.lat,lng:pos?.lng||r.lng,address:profile?.area||r.address,note:"Confirmed in app"});r.handoverReference=data.handover?.handover_reference;r.collectorConfirmed=!!data.handover?.collector_confirmed;r.recyclerConfirmed=!!data.handover?.recycler_confirmed;r.status=data.both_confirmed?"Handed over":"Accepted";save();render();toast(data.both_confirmed?tr("saved"):tr("confirmHandover"));}catch(err){enqueue({id:"handover:"+r.transactionReference+":"+role,type:"handover",data:{transaction_reference:r.transactionReference,handover_reference:r.handoverReference||("HREF-"+Date.now().toString(36).toUpperCase()),actual_weight_kg:weightKg(r.quantity),handover_latitude:pos?.lat||r.lat,handover_longitude:pos?.lng||r.lng,handover_address:profile?.area||r.address,collector_confirmed:role==="collector",recycler_confirmed:role==="recycler",handover_at:new Date().toISOString()}}).catch(()=>{});toast("Saved offline");}
   }
-  async async function recordPayment(r){
+  async function recordPayment(r){
     const amount=Number(prompt("Final payment amount (₹)",String(r.agreedPrice||r.currentOffer||r.expectedPrice||0)));if(!Number.isFinite(amount)||amount<=0)return;
     const method=(prompt("Payment method: cash or digital","cash")||"cash").toLowerCase()==="digital"?"digital":"cash";
     if(!r.transactionReference)await acceptWorkflow(r);if(!r.transactionReference)return;
     try{await apiPost("payment",{transactionReference:r.transactionReference,amount,method});r.agreedPrice=amount;r.status="Completed";r.finalSaleValue=amount;r.paymentStatus="paid";save();render();toast(tr("paidSuccess"));}catch{enqueue({id:"payment:"+r.transactionReference,type:"payment",data:{transaction_reference:r.transactionReference,amount,status:"paid",payment_method:method,payment_reference:null,paid_at:new Date().toISOString()}}).catch(()=>{});r.agreedPrice=amount;r.status="Completed";save();render();toast("Saved offline");}
   }
-  async async function earningsScreen(){
+  async function earningsScreen(){
     let data={rows:[],total:0,paid:0,pending:0};try{data=await apiGet("ledger");}catch{}
     A.innerHTML=topbar()+'<main class="page narrow"><section class="section-title"><div><p class="eyebrow">₹ '+tr("earnings")+'</p><h1>'+tr("earnings")+'</h1><p>'+tr("workflowNote")+'</p></div></section><div class="earnings-grid"><section class="panel earnings-total"><span>'+tr("totalEarned")+'</span><strong>'+money(data.total)+'</strong></section><section class="panel"><span>'+tr("paid")+'</span><strong>'+money(data.paid)+'</strong></section><section class="panel"><span>'+tr("pendingAmount")+'</span><strong>'+money(data.pending)+'</strong></section></div><section class="panel ledger-list">'+(data.rows?.length?data.rows.map(x=>'<div class="ledger-row"><div><strong>'+money(x.amount)+'</strong><span>'+esc(x.transaction_reference)+'</span></div><div><span>'+esc(x.payment_method||"—")+'</span><span>'+esc(x.status)+'</span></div></div>').join(""):'<div class="empty">'+tr("noEarnings")+'</div>')+'</section></main>';bindShell();
   }
@@ -337,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }}).catch(()=>{});
     }
   };
-  async async function syncPending(){
+  async function syncPending(){
     if(!navigator.onLine)return;
     try{await ensureSession();}catch{return;}
     const items=await getOutbox().catch(()=>[]);
@@ -509,7 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  async async function uploadRecyclerDocument(type,file){
+  async function uploadRecyclerDocument(type,file){
     if(!file)return;
     if(!navigator.onLine)return toast("Connect to internet to upload documents.");
     try{
@@ -597,7 +597,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("weight")?.dispatchEvent(new Event("input",{bubbles:true}));
     return {category:document.getElementById("cat")?.value||"",itemType:document.getElementById("itemType")?.value||"",confidence:Number(payload.confidence)};
   }
-  async async function analyzeScrapPhoto(file){
+  async function analyzeScrapPhoto(file){
     if(!file)return;
     const state=document.getElementById("photoState"),btn=document.getElementById("analyzePhoto");
     const taskId="image:"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
@@ -615,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(err); if(state)state.textContent="Could not save photo locally."; toast("Photo queue failed: "+err.message);
     }finally{if(btn)btn.disabled=false;}
   }
-  async async function processImageTask(taskId){
+  async function processImageTask(taskId){
     const media=await getMedia(taskId); if(!media?.blob)throw new Error("Queued image not found");
     const dataUrl=await readDataUrl(media.blob);
     const response=await fetch("/api/analyze-image",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:dataUrl}),credentials:"same-origin"});
@@ -631,7 +631,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toast("✓ Photo analysis complete"+(applied.itemType?" — "+applied.itemType:""));
     return result;
   }
-  async async function predictPriceFromForm(){
+  async function predictPriceFromForm(){
     const category=document.getElementById("cat")?.value.trim(),itemType=document.getElementById("itemType")?.value.trim();
     const weightText=document.getElementById("weight")?.value.trim(),condition=document.getElementById("cond")?.value||"unknown";
     const weightKgValue=weightKg(weightText);
@@ -648,7 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }catch(err){console.error(err);toast("Price prediction queue failed: "+err.message);}
     finally{if(btn)btn.disabled=false;}
   }
-  async async function processPriceTask(taskId,params){
+  async function processPriceTask(taskId,params){
     const response=await fetch("/api/predict-price",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(params),credentials:"same-origin"});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.detail||data.error||"Price prediction failed");
@@ -718,7 +718,7 @@ function listScreen(){
     A.querySelectorAll("[data-payment]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.payment));if(r)recordPayment(r);});
     A.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{const r=requests.find(x=>String(x.id)===String(b.dataset.v));if(r&&r.lat)showRequestMap(r);});
   }
-  async async function acceptOffer(id){
+  async function acceptOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
     const price=Number(r.currentOffer||r.askingPrice||r.indicativeTotal);
     if(!Number.isFinite(price)||price<=0)return toast(tr("priceRequired"));
@@ -778,7 +778,7 @@ function listScreen(){
     }
     render();
   }
-  async async function counterOffer(id){
+  async function counterOffer(id){
     const r=requests.find(x=>String(x.id)===String(id)); if(!r)return;
     const input=document.querySelector('[data-counter="'+id+'"]'); const price=Number(input?.value);
     if(!Number.isFinite(price)||price<=0)return toast(tr("priceRequired"));
@@ -883,7 +883,7 @@ function listScreen(){
     },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
   }
   function normalizeDigits(s){return s.replace(/[०-९]/g,d=>"०१२३४५६७८९".indexOf(d)).replace(/[०-९]/g,d=>String("०१२३४५६७८९".indexOf(d)));}
-  async async function startRecordedVoice(){
+  async function startRecordedVoice(){
     const state=document.getElementById("listenState"),mic=document.getElementById("mic");
     if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){
       if(state)state.textContent="Voice input is not supported by this browser.";
@@ -1044,7 +1044,7 @@ function listScreen(){
     if(catEl&&weightEl){catEl.dispatchEvent(new Event("input"));weightEl.dispatchEvent(new Event("input"));}
     toast("✓ "+raw);
   }
-  async async async function adminScreen(){
+  async async function adminScreen(){
     if(role!=="admin"){dashboard();return;}
     let data={summary:{},collectors:[],recyclers:[],all_collectors:[],all_recyclers:[],lots:[],offers:[],transactions:[],handovers:[],earnings:[],market:[]};
     let error="";
