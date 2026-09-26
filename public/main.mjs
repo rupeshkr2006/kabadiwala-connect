@@ -442,15 +442,20 @@ document.addEventListener("DOMContentLoaded", () => {
     A.innerHTML='<main class="auth"><div class="auth-card role-card"><button class="back" id="roleChangeNumber">← '+tr("change")+'</button><p class="eyebrow">ONE CHOICE</p><h1>'+tr("chooseRole")+'</h1><div class="role-grid"><button class="role-option" data-role="collector"><span class="role-icon">♻</span><strong>'+tr("collector")+'</strong><small>'+tr("collectorHint")+'</small></button><button class="role-option" data-role="recycler"><span class="role-icon">⌂</span><strong>'+tr("recycler")+'</strong><small>'+tr("recyclerHint")+'</small></button></div><button class="secondary full" id="adminEntry" style="margin-top:14px">🛡 Admin panel</button><p id="adminEntryMsg" class="muted" style="margin-top:8px"></p></div></main>';
     document.getElementById("roleChangeNumber").onclick=()=>go("login");
     A.querySelectorAll("[data-role]").forEach(b=>b.onclick=async()=>{
-      const selected=b.dataset.role;
+      const selected=String(b.dataset.role||"");
+      if(!["collector","recycler"].includes(selected))return;
+      b.disabled=true;
       try{
         const sr=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:selected})});
         const data=await sr.json().catch(()=>({}));
         if(!sr.ok)throw new Error(data.error||tr("roleError"));
-        role=data.role||selected;
+        if(data.role!==selected)throw new Error("Could not create the selected account type. Please try again.");
+        role=selected;
+        sessionReady=true;
+        profile={...(profile||{}),phone:accountId,role:selected,name:profile?.name||"New User"};
         save();
         go("setup");
-      }catch(err){toast(err.message||tr("roleError"));}
+      }catch(err){toast(err.message||tr("roleError"));}finally{b.disabled=false;}
     });
     document.getElementById("adminEntry").onclick=async()=>{const msg=document.getElementById("adminEntryMsg");msg.textContent="Checking admin access…";try{const r=await fetch("/api/session",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({phone:accountId,otp:"123456",role:"admin"})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"This account is not configured as admin.");role="admin";save();go("admin");}catch(e){msg.textContent=e.message||"Admin access denied.";}}};
   function setupScreen(){
