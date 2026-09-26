@@ -1,4 +1,4 @@
-const CACHE_NAME = "kabadiwala-connect-v16-final-auth-admin";
+const CACHE_NAME = "kabadiwala-connect-v17-user-role-back-admin";
 const APP_SHELL = [
   "/",
   "/index.html",
