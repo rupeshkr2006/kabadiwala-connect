@@ -98,6 +98,21 @@ export default async function handler(req,res){
       const profile=exists[0],profileId=profile.id;
       if(!["collector","recycler"].includes(String(profile.role)))return res.status(403).json({error:"Only collector or recycler accounts can be deleted."});
 
+      // Remove phone-based platform records first. These tables are not all
+      // FK-linked to profiles, so they are cleaned independently.
+      const platformLots=await rest("/rest/v1/platform_lots?collector_phone=eq."+encodeURIComponent(phone)+"&select=lot_reference").catch(()=>[]);
+      const refs=(platformLots||[]).map(x=>x.lot_reference).filter(Boolean);
+      if(refs.length){
+        const inRefs=refs.map(encodeURIComponent).join(",");
+        await rest("/rest/v1/platform_quotes?lot_reference=in.("+inRefs+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
+        await rest("/rest/v1/platform_transactions?lot_reference=in.("+inRefs+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
+        await rest("/rest/v1/platform_lots?lot_reference=in.("+inRefs+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
+      }
+      await rest("/rest/v1/platform_offers?actor_ref=eq."+encodeURIComponent(phone),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
+      await rest("/rest/v1/platform_transactions?collector_phone=eq."+encodeURIComponent(phone),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
+      await rest("/rest/v1/platform_earnings?collector_phone=eq."+encodeURIComponent(phone),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
+
+      // Remove uploaded recycler documents where possible.
       const docs=Array.isArray(profile.recycler_documents)?profile.recycler_documents:[];
       if(docs.length){
         try{
@@ -106,48 +121,44 @@ export default async function handler(req,res){
         }catch(storageErr){console.warn("Could not remove recycler documents:",storageErr?.message||storageErr);}
       }
 
-      const lots=await rest("/rest/v1/lots?collector_id=eq."+encodeURIComponent(profileId)+"&select=id");
-      const lotIds=(lots||[]).map(x=>x.id).filter(Boolean);
-      const tx=await rest("/rest/v1/transactions?or=(collector_id.eq."+encodeURIComponent(profileId)+",recycler_id.eq."+encodeURIComponent(profileId)+")&select=id");
-      const txIds=(tx||[]).map(x=>x.id).filter(Boolean);
-
-      if(txIds.length){
-        const txIn=txIds.map(encodeURIComponent).join(",");
-        await rest("/rest/v1/payments?transaction_id=in.("+txIn+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-        await rest("/rest/v1/earnings?transaction_id=in.("+txIn+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      }
-      await rest("/rest/v1/payments?recorded_by=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/earnings?collector_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-
-      if(lotIds.length){
-        const lotIn=lotIds.map(encodeURIComponent).join(",");
-        await rest("/rest/v1/quotes?lot_id=in.("+lotIn+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-        await rest("/rest/v1/lots?id=in.("+lotIn+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      }
-      await rest("/rest/v1/quotes?recycler_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      if(txIds.length)await rest("/rest/v1/transactions?id=in.("+txIds.map(encodeURIComponent).join(",")+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/recycler_profiles?user_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/recycler_rates?recycler_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/prices?recycler_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/notifications?user_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/audit_logs?actor_id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-
-      const platformLots=await rest("/rest/v1/platform_lots?collector_phone=eq."+encodeURIComponent(phone)+"&select=lot_reference");
-      const refs=(platformLots||[]).map(x=>x.lot_reference).filter(Boolean);
-      if(refs.length){
-        const inRefs=refs.map(encodeURIComponent).join(",");
-        await rest("/rest/v1/platform_earnings?transaction_reference=in."+encodeURIComponent("(" + refs.join(",") + ")"),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
-        await rest("/rest/v1/platform_handovers?transaction_reference=in."+encodeURIComponent("(" + refs.join(",") + ")"),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
-        await rest("/rest/v1/platform_quotes?lot_reference=in.("+inRefs+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-        await rest("/rest/v1/platform_transactions?lot_reference=in.("+inRefs+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-        await rest("/rest/v1/platform_lots?lot_reference=in.("+inRefs+")",{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      }
-      await rest("/rest/v1/platform_offers?actor_ref=eq."+encodeURIComponent(phone),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
-      await rest("/rest/v1/platform_transactions?collector_phone=eq."+encodeURIComponent(phone),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
-      await rest("/rest/v1/platform_earnings?collector_phone=eq."+encodeURIComponent(phone),{method:"DELETE",headers:{"Prefer":"return=minimal"}}).catch(()=>{});
-
-      await rest("/rest/v1/profiles?id=eq."+encodeURIComponent(profileId),{method:"DELETE",headers:{"Prefer":"return=minimal"}});
+      // The database function deletes all profile FK dependants in the
+      // correct order and finally removes the profile row itself.
+      const deleted=await rest("/rest/v1/rpc/admin_delete_profile",{
+        method:"POST",
+        headers:{"Prefer":"return=representation"},
+        body:JSON.stringify({target_profile:profileId})
+      });
+      if(!deleted?.deleted)return res.status(404).json({error:"User account could not be deleted."});
       return res.status(200).json({ok:true,phone,deleted:true,permanently_deleted:true});
+    }
+    if(req.method==="POST"&&action==="verify-recycler"){
+      const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,""),decision=String(p.decision||"").toLowerCase();
+      if(!/^\d{10}$/.test(phone))return res.status(400).json({error:"Valid recycler phone is required."});
+      if(!["verify","reject","suspend"].includes(decision))return res.status(400).json({error:"Invalid verification decision."});
+      const exists=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone)+"&role=eq.recycler&select=phone,recycler_documents");
+      if(!exists?.[0])return res.status(404).json({error:"Recycler account not found."});
+
+      const docs=Array.isArray(exists[0].recycler_documents)?exists[0].recycler_documents:[];
+      const required=["authorization","registration","address_proof"];
+      const missing=required.filter(type=>!docs.some(d=>String(d?.document_type||"")===type));
+      const status=decision==="verify"?"verified":decision==="reject"?"rejected":"suspended";
+      const note=String(p.note||"").slice(0,500);
+      const verificationNote=decision==="verify" && missing.length
+        ? (note?note+" ":"")+"Verified by admin; missing documents: "+missing.join(", ")+"."
+        : (note||null);
+
+      // Verification is an admin decision. Documents are displayed for review,
+      // but their presence is not a technical blocker to the admin action.
+      const patch={
+        verification_status:status,
+        verification_badge:status==="verified",
+        verified_at:status==="verified"?new Date().toISOString():null,
+        verified_by:session.phone,
+        verification_note:verificationNote,
+        active:status!=="suspended"
+      };
+      const rows=await rest("/rest/v1/profiles?phone=eq."+encodeURIComponent(phone),{method:"PATCH",headers:{"Prefer":"return=representation"},body:JSON.stringify(patch)});
+      return res.status(200).json({ok:true,recycler:rows?.[0]||patch,missing_documents:missing});
     }
     if(req.method==="POST"&&action==="verify-recycler"){
       const p=req.body||{},phone=String(p.phone||"").replace(/\D/g,""),decision=String(p.decision||"").toLowerCase();
