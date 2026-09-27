@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
   let recyclers = [];
   let recyclersLoaded = false;
+  let recyclerRefreshPending = false;
 
   const T = {
     en: {
@@ -177,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const rows=recyclers||[];
     const cards=rows.length?'<div class="recycler-grid">'+rows.map(x=>{const verified=!!x.verification_badge||String(x.verification_status||"").toLowerCase()==="verified";return '<article class="panel recycler-card"><div class="recycler-head"><div><h2>'+esc(x.facility_name||"Recycler")+(verified?' <span class="verified-badge">★ '+tr("verified")+'</span>':'')+'</h2><p>'+esc(x.city||x.district||"Andhra Pradesh")+'</p></div><span class="status accepted">'+(verified?tr("verified"):tr("notVerified"))+'</span></div><p class="recycler-address">'+esc(x.address||"")+'</p><div class="recycler-chips"><span>'+tr("accepted")+': '+esc((x.materials_accepted||[]).join(", "))+'</span><span>'+tr("pickupAvailable")+': '+(x.pickup_available?"Yes":"No")+'</span><span>'+tr("serviceArea")+': '+esc(x.service_area_km?x.service_area_km+" km":"—")+'</span></div><p class="market-meta">'+tr("verifiedSource")+': '+esc(x.authorization_source||"—")+'</p></article>';}).join("")+'</div>':'<div class="empty panel">'+tr("noRecyclers")+'</div>';
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("recyclers")+'</p><h1>'+tr("nearbyRecyclers")+'</h1><p>★ '+tr("verified")+' · '+tr("notVerified")+'</p></div><button class="secondary" id="refreshRecyclers">↻ '+tr("refresh")+'</button></section>'+cards+'</main>';
-    bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}
+    bindShell();document.getElementById("refreshRecyclers").onclick=()=>loadRecyclerData({rerender:true,force:true});if(!recyclersLoaded){recyclersLoaded=true;loadRecyclerData({rerender:true,force:true});}else if(!recyclerRefreshPending){recyclerRefreshPending=true;loadRecyclerData({rerender:true,force:true}).finally(()=>{recyclerRefreshPending=false;});}
   }
 
   async function loadSharedRequests({rerender=false}={}){
