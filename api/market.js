@@ -17,7 +17,9 @@ export default async function handler(req,res){
     const priceRows=await pricesRes.json().catch(()=>[]);
     const trends=await trendRes.json().catch(()=>[]);
     if(!pricesRes.ok)throw new Error("Market price query failed: "+JSON.stringify(priceRows));
-    if(!trendRes.ok)throw new Error("Price trend query failed: "+JSON.stringify(trends));
+    // Price cards are the primary shared board. A trend-query problem must
+    // never make newly published admin prices disappear from the main board.
+    const safeTrends=trendRes.ok && Array.isArray(trends)?trends:[];
     const seen=new Set();
     const latest=(Array.isArray(priceRows)?priceRows:[]).filter(row=>{
       const key=[String(row.material_name||"").trim().toLowerCase(),String(row.city||"").trim().toLowerCase(),String(row.state||"").trim().toLowerCase(),String(row.unit||"").trim().toLowerCase()];
@@ -27,7 +29,7 @@ export default async function handler(req,res){
       seen.add(k);
       return true;
     }).sort((a,b)=>String(a.material_name||"").localeCompare(String(b.material_name||"")));
-    return res.status(200).json({latest,trends:Array.isArray(trends)?trends:[],days,generated_at:new Date().toISOString()});
+    return res.status(200).json({latest,trends:safeTrends,days,generated_at:new Date().toISOString()});
   }catch(e){
     console.error(e);
     return res.status(502).json({error:"Market data query failed.",detail:e.message});
