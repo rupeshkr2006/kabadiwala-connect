@@ -41,25 +41,45 @@ export default async function handler(req,res){
       // split queries could silently collapse to "No users" when one
       // role-specific projection changed. The admin panel must always see
       // every collector/recycler, including newly created and inactive ones.
-      const [allProfiles,lots,offers,transactions,handovers,earnings,market]=await Promise.all([
-        rest("/rest/v1/profiles?select=id,phone,name,role,business_name,preferred_language,general_location,facility_address,accepted_materials,pickup_radius_km,latitude,longitude,active,registration_number,gst_number,authorization_number,authorization_type,authorization_expiry,contact_email,pickup_available,service_area,offered_rate_notes,recycler_documents,verification_status,verification_badge,verified_at,verified_by,verification_note,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
+      // Keep user loading independent from optional platform datasets.
+      // A failure in a large recycler/detail projection must never make the
+      // User management table appear empty.
+      const [allProfiles,recyclerProfiles,lots,offers,transactions,handovers,earnings,market]=await Promise.all([
+        rest("/rest/v1/profiles?select=id,phone,name,role,business_name,preferred_language,general_location,active,created_at,updated_at,verification_status,verification_badge,verified_at,verified_by,verification_note&order=created_at.desc&limit=500").catch(()=>[]),
+        rest("/rest/v1/profiles?role=eq.recycler&select=id,phone,name,business_name,general_location,facility_address,preferred_language,accepted_materials,pickup_radius_km,latitude,longitude,active,registration_number,gst_number,authorization_number,authorization_type,authorization_expiry,contact_email,pickup_available,service_area,offered_rate_notes,recycler_documents,verification_status,verification_badge,verified_at,verified_by,verification_note,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
         rest("/rest/v1/platform_lots?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_offers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_transactions?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_handovers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_earnings?select=*&order=created_at.desc&limit=300").catch(()=>[]),
-        rest("/rest/v1/latest_price_board?select=id,material_id,material_name,sub_category,city,state,buying_price,selling_price,unit,market_min,market_max,source,valid_from,observed_at,price_type&order=material_name.asc").catch(()=>[])
+        // Read source observations directly so admin-published prices are
+        // immediately visible in this panel as well as on the shared board.
+        rest("/rest/v1/prices?select=id,material_id,material_name,sub_category,city,state,buying_price,selling_price,unit,market_min,market_max,source,valid_from,observed_at,price_type&order=observed_at.desc&limit=2000").catch(()=>[])
       ]);
       const profiles=Array.isArray(allProfiles)?allProfiles:[];
-      const collectors=profiles.filter(x=>String(x.role)==="collector"&&x.active!==false);
-      const recyclers=profiles.filter(x=>String(x.role)==="recycler"&&x.active!==false);
-      const allCollectors=profiles.filter(x=>String(x.role)==="collector");
-      const allRecyclers=profiles.filter(x=>String(x.role)==="recycler");
+      const detailMap=new Map((Array.isArray(recyclerProfiles)?recyclerProfiles:[]).map(x=>[String(x.id),x]));
+      // Merge the stable user row with recycler-specific fields.
+      const users=profiles.map(x=>x.role==="recycler"&&detailMap.has(String(x.id))?{...x,...detailMap.get(String(x.id))}:{...x});
+      const collectors=users.filter(x=>String(x.role)==="collector"&&x.active!==false);
+      const recyclers=users.filter(x=>String(x.role)==="recycler"&&x.active!==false);
+      const allCollectors=users.filter(x=>String(x.role)==="collector");
+      const allRecyclers=users.filter(x=>String(x.role)==="recycler");
+      // Preserve the newest observation for each material/location/unit in
+      // the admin table, while retaining every observation in the database.
+      const seenMarket=new Set();
+      const marketRows=(Array.isArray(market)?market:[]).filter(row=>{
+        const key=[String(row.material_name||"").trim().toLowerCase(),String(row.city||"").trim().toLowerCase(),String(row.state||"").trim().toLowerCase(),String(row.unit||"").trim().toLowerCase()];
+        if(!key[0])return false;
+        const k=key.join("|");
+        if(seenMarket.has(k))return false;
+        seenMarket.add(k);
+        return true;
+      }).sort((a,b)=>String(a.material_name||"").localeCompare(String(b.material_name||"")));
       const pending=(recyclers||[]).filter(x=>String(x.verification_status||"pending")==="pending").length;
       const verified=(recyclers||[]).filter(x=>String(x.verification_status)==="verified").length;
       return res.status(200).json({
         summary:{collectors:(collectors||[]).length,recyclers:(recyclers||[]).length,pending_recycler_verification:pending,verified_recyclers:verified,lots:(lots||[]).length,offers:(offers||[]).length,transactions:(transactions||[]).length,handovers:(handovers||[]).length,earnings:(earnings||[]).length},
-        collectors:collectors||[],recyclers:recyclers||[],all_collectors:(allCollectors&&allCollectors.length?allCollectors:collectors||[]),all_recyclers:(allRecyclers&&allRecyclers.length?allRecyclers:recyclers||[]),lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:market||[],
+        collectors:collectors||[],recyclers:recyclers||[],users:users||[],all_collectors:allCollectors||[],all_recyclers:allRecyclers||[],lots:lots||[],offers:offers||[],transactions:transactions||[],handovers:handovers||[],earnings:earnings||[],market:marketRows||[],
         generated_at:new Date().toISOString()
       });
     }
