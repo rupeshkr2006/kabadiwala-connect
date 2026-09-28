@@ -1,6 +1,6 @@
 const CACHE_NAME = "kabadiwala-connect-v26-network-api";
 const APP_SHELL = [
-  "/","/index.html","/main.mjs?v=20260928-admin-market-fix-v4","/styles.css","/favicon.svg","/offline-db.mjs",
+  "/","/index.html","/main.mjs?v=20260928-admin-market-fix-v5","/styles.css","/favicon.svg","/offline-db.mjs",
   "/manifest.webmanifest","/admin.html","/models/labels.json","/models/ewaste_mobilenetv2_fp16.tflite",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.10/dist/tf-tflite.min.js"
