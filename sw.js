@@ -1,4 +1,4 @@
-const CACHE_NAME = "kabadiwala-connect-v23-admin-fix";
+const CACHE_NAME = "kabadiwala-connect-v24-admin-market-fix";
 const APP_SHELL = [
   "/",
   "/index.html",
