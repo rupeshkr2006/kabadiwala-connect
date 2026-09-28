@@ -2,7 +2,7 @@ const CACHE_NAME = "kabadiwala-connect-v26-network-api";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/main.mjs?v=20260928-admin-market-fix-v4",
+  "/main.mjs?v=20260928-admin-market-fix-v5",
   "/styles.css",
   "/favicon.svg",
   "/offline-db.mjs",
