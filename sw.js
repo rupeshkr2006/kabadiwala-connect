@@ -1,21 +1,21 @@
-const CACHE_NAME = "kabadiwala-connect-v25-admin-market-fix";
+const CACHE_NAME = "kabadiwala-connect-v26-network-api";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/main.mjs",
+  "/main.mjs?v=20260928-admin-market-fix-v4",
   "/styles.css",
   "/favicon.svg",
   "/offline-db.mjs",
-  "/manifest.webmanifest", "/admin.html",
+  "/manifest.webmanifest",
+  "/admin.html",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js",
   "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite@0.0.1-alpha.9/dist/tf-tflite.min.js",
   "/offline-ai.mjs"
 ];
 const CACHE_ORIGINS = new Set([self.location.origin,"https://cdn.jsdelivr.net"]);
-
 async function cacheOne(cache,url){
   try{
-    const res=await fetch(url,{mode:"cors"});
+    const res=await fetch(url,{mode:"cors",cache:"no-store"});
     if(res.ok||res.type==="opaque")await cache.put(url,res.clone());
   }catch{}
 }
@@ -27,15 +27,13 @@ self.addEventListener("install",event=>{
   })());
 });
 self.addEventListener("activate",event=>{
-  event.waitUntil(
-    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k))))
-      .then(()=>self.clients.claim())
-  );
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
 });
 self.addEventListener("fetch",event=>{
   const req=event.request;
   if(req.method!=="GET")return;
   const url=new URL(req.url);
+  if(url.origin===self.location.origin && (url.pathname.startsWith("/api/") || url.pathname==="/sw.js"))return;
   if(!CACHE_ORIGINS.has(url.origin))return;
   event.respondWith(
     caches.match(req).then(cached=>cached||fetch(req).then(res=>{
