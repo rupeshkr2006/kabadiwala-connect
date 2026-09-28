@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let marketLatest = [];
   let marketTrends = [];
   let marketLoaded = false;
+  let marketFetchedAt = 0;
+  let marketFetchInFlight = false;
   let sharedRefreshing = false;
   let sharedPoll = null;
   let sessionReady = false;
@@ -216,9 +218,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const res=await fetch("/api/market?days=30",{cache:"no-store"}); const data=await res.json().catch(()=>({}));
       if(!res.ok)throw new Error(data.error||"Market data unavailable");
       marketLatest=Array.isArray(data.latest)?data.latest:[]; marketTrends=Array.isArray(data.trends)?data.trends:[];
-      await putState("market",{latest:marketLatest,trends:marketTrends,updatedAt:Date.now()}).catch(()=>{});
+      marketFetchedAt=Date.now();
+      await putState("market",{latest:marketLatest,trends:marketTrends,updatedAt:marketFetchedAt}).catch(()=>{});
       if(rerender && location.hash==="#market")render();
     }catch(err){console.warn("Market data:",err);if(!marketLatest.length)marketLatest=FALLBACK_MARKET;await putState("market",{latest:marketLatest,trends:marketTrends,updatedAt:Date.now()}).catch(()=>{});if(rerender && location.hash==="#market")render();}
+    finally{marketFetchInFlight=false;}
   }
   function formatDate(value){if(!value)return "—";const d=new Date(value);if(Number.isNaN(d.getTime()))return String(value);return d.toLocaleDateString(lang==="hi"?"hi-IN":lang==="mr"?"mr-IN":"en-IN",{day:"2-digit",month:"short",year:"numeric"});}
   function marketScreen(){
@@ -227,7 +231,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const grouped={}; trendRows.forEach(x=>{const k=x.material_name||"Material";(grouped[k] ||= []).push(x);});
     const trendHtml=Object.entries(grouped).map(([name,rows])=>{const ordered=rows.slice().sort((a,b)=>String(a.price_day).localeCompare(String(b.price_day)));const vals=ordered.map(x=>Number(x.avg_buying_price)||0);const max=Math.max(...vals,1);return '<article class="panel trend-card"><div class="panel-head"><div><h2>'+esc(name)+'</h2><p>'+ordered.length+' observation'+(ordered.length===1?"":"s")+'</p></div><strong>'+money(vals[vals.length-1])+'/kg</strong></div><div class="trend-bars">'+ordered.slice(-14).map(x=>'<span style="height:'+Math.max(8,Math.round(((Number(x.avg_buying_price)||0)/max)*100))+'%" title="'+esc(formatDate(x.price_day))+': '+money(x.avg_buying_price)+'"></span>').join("")+'</div></article>';}).join("")||'<div class="empty panel">'+tr("noMarket")+'</div>';
     A.innerHTML=topbar()+'<main class="page"><section class="section-title"><div><p class="eyebrow">♻️ '+tr("market")+'</p><h1>'+tr("latestPrices")+'</h1><p>'+tr("referenceData")+'</p></div><button class="secondary" id="refreshMarket">↻ '+tr("refreshMarket")+'</button></section>'+latestHtml+'<section class="section-title market-section-title"><div><h1>'+tr("history")+'</h1><p>Observed records from the marketplace dataset.</p></div></section><div class="trend-grid">'+trendHtml+'</div></main>';
-    bindShell();document.getElementById("refreshMarket").onclick=()=>loadMarketData({rerender:true,force:true});if(!marketLoaded){marketLoaded=true;loadMarketData({rerender:true,force:true});}
+    bindShell();document.getElementById("refreshMarket").onclick=()=>loadMarketData({rerender:true,force:true});
+    // Re-check the shared board whenever this screen has not fetched fresh
+    // data recently. This prevents another user's cached market state from
+    // hiding a price just published by the admin.
+    if(!marketLoaded){marketLoaded=true;loadMarketData({rerender:true,force:true});}
+    else if(Date.now()-marketFetchedAt>5000)loadMarketData({rerender:true,force:true});
   }
 
   T.en.admin="Admin"; T.en.adminPanel="Admin panel"; T.en.verifyRecyclers="Recycler verification"; T.en.verified="Verified"; T.en.notVerified="Not verified"; T.en.verify="Verify"; T.en.reject="Reject"; T.en.suspend="Suspend"; T.en.documents="Documents"; T.en.noDocuments="No documents uploaded."; T.en.refresh="Refresh"; T.en.summary="Overview"; T.en.allData="All platform data"; T.en.collectors="Collectors"; T.en.recyclers="Recyclers"; T.en.lots="Requests / lots"; T.en.offers="Offers"; T.en.transactions="Transactions"; T.en.handovers="Handovers"; T.en.pendingVerification="Pending verification"; T.en.verifiedRecyclers="Verified recyclers"; T.en.registrationNumber="Registration number"; T.en.gstNumber="GST number"; T.en.authorizationNumber="E-waste authorization number"; T.en.authorizationType="Authorization type"; T.en.authorizationExpiry="Authorization expiry"; T.en.contactEmail="Contact email"; T.en.facilityAddress="Facility address"; T.en.pickupAvailable="Pickup available"; T.en.serviceArea="Service area"; T.en.offeredRateNotes="Rate / offer notes"; T.en.upload="Upload"; T.en.saveProfile="Save recycler details"; T.en.reverification="Any profile/document change sends the recycler back to pending verification.";
