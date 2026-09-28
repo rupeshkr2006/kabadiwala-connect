@@ -37,11 +37,12 @@ export default async function handler(req,res){
   const action=String(req.query?.action||"");
   try{
     if(req.method==="GET"&&action==="overview"){
-      const [collectors,recyclers,allCollectors,allRecyclers,lots,offers,transactions,handovers,earnings,market]=await Promise.all([
-        rest("/rest/v1/profiles?role=eq.collector&active=eq.true&select=id,phone,name,preferred_language,general_location,active,created_at,updated_at&order=created_at.desc&limit=200").catch(()=>[]),
-        rest("/rest/v1/profiles?role=eq.recycler&active=eq.true&select=id,phone,name,business_name,general_location,facility_address,preferred_language,accepted_materials,pickup_radius_km,latitude,longitude,active,registration_number,gst_number,authorization_number,authorization_type,authorization_expiry,contact_email,pickup_available,service_area,offered_rate_notes,recycler_documents,verification_status,verification_badge,verified_at,verified_by,verification_note,created_at,updated_at&order=created_at.desc&limit=200").catch(()=>[]),
-        rest("/rest/v1/profiles?role=eq.collector&select=id,phone,name,preferred_language,general_location,active,role,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
-        rest("/rest/v1/profiles?role=eq.recycler&select=id,phone,name,business_name,general_location,facility_address,active,role,verification_status,verification_badge,recycler_documents,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
+      // Read profiles once with a small, stable column set. The previous
+      // split queries could silently collapse to "No users" when one
+      // role-specific projection changed. The admin panel must always see
+      // every collector/recycler, including newly created and inactive ones.
+      const [allProfiles,lots,offers,transactions,handovers,earnings,market]=await Promise.all([
+        rest("/rest/v1/profiles?select=id,phone,name,role,business_name,preferred_language,general_location,facility_address,accepted_materials,pickup_radius_km,latitude,longitude,active,registration_number,gst_number,authorization_number,authorization_type,authorization_expiry,contact_email,pickup_available,service_area,offered_rate_notes,recycler_documents,verification_status,verification_badge,verified_at,verified_by,verification_note,created_at,updated_at&order=created_at.desc&limit=500").catch(()=>[]),
         rest("/rest/v1/platform_lots?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_offers?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/platform_transactions?select=*&order=created_at.desc&limit=300").catch(()=>[]),
@@ -49,6 +50,11 @@ export default async function handler(req,res){
         rest("/rest/v1/platform_earnings?select=*&order=created_at.desc&limit=300").catch(()=>[]),
         rest("/rest/v1/latest_price_board?select=id,material_id,material_name,sub_category,city,state,buying_price,selling_price,unit,market_min,market_max,source,valid_from,observed_at,price_type&order=material_name.asc").catch(()=>[])
       ]);
+      const profiles=Array.isArray(allProfiles)?allProfiles:[];
+      const collectors=profiles.filter(x=>String(x.role)==="collector"&&x.active!==false);
+      const recyclers=profiles.filter(x=>String(x.role)==="recycler"&&x.active!==false);
+      const allCollectors=profiles.filter(x=>String(x.role)==="collector");
+      const allRecyclers=profiles.filter(x=>String(x.role)==="recycler");
       const pending=(recyclers||[]).filter(x=>String(x.verification_status||"pending")==="pending").length;
       const verified=(recyclers||[]).filter(x=>String(x.verification_status)==="verified").length;
       return res.status(200).json({
